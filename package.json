@@ -1,7 +1,7 @@
 {
   "name": "vertigo-above-the-fall",
   "version": "1.0.0",
-  "description": "VERTIGO: ABOVE THE FALL — a vertical parkour adventure where falling reveals the world.",
+  "description": "VERTIGO: ABOVE THE FALL \u2014 a vertical parkour adventure where falling reveals the world.",
   "private": true,
   "type": "module",
   "scripts": {
@@ -12,7 +12,9 @@
     "test": "vitest run",
     "server": "node --import tsx server/index.ts",
     "verify-world": "tsx tools/verify_world.ts",
-    "verify-trials": "tsx tools/trial_times.ts"
+    "verify-trials": "tsx tools/trial_times.ts",
+    "verify-journey": "tsx tools/journey.ts",
+    "verify-daily": "tsx tools/daily_check.ts"
   },
   "dependencies": {
     "@capacitor/core": "^8.5.2",

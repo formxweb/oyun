@@ -107,7 +107,8 @@ export function region02(gate: { x: number; y: number; z: number }): { data: Reg
 
   // ------------------------------------------------------------------ Section A: Undercroft street (vault lesson)
   // A lane across the slab toward the courtyard, crossed by low walls, carts and railings.
-  b.collect('l.vault', 'lesson', gate.x + 6, 105.3, gate.z - 3.5, Ability.Vault);
+  // on the way from the ladder to the lane, so nobody reaches the walls without it
+  b.collect('l.vault', 'lesson', gate.x + 2.4, 105.3, gate.z - 5.2, Ability.Vault);
   const laneA = 243;
   for (let i = 0; i < 5; i++) {
     const p = polar(laneA - i * 5.5, 50);

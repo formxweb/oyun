@@ -210,7 +210,8 @@ export function region01(): R1Out {
   b.trigger('t.r1.bell', 'r1_bell', { type: 'interact', pos: v3(10, 5.2, 47), radius: 3.2 }, { textKey: 'mem.r1.bell', delay: 1.2 });
 
   // Slide lesson and the Low Gate (a collapsed awning: faster to slide under than crouch).
-  b.collect('l.slide', 'lesson', -12, 4.9, 49, Ability.Slide);
+  // on the run down to the gate, so nobody reaches the gate without it
+  b.collect('l.slide', 'lesson', -9, 4.8, 51.5, Ability.Slide);
   b.aabb(-22, 4.7, 44, -15, 5.3, 48, { mat: Mat.Cloth, tint: 0x9a4a2e });
   b.wall(-22, 48.3, -15, 48.3, 3.6, 2.6, 0.3, { mat: Mat.Wood, tint: 0x6e5238 });
   b.dbox(-18.5, 5.3, 46, 7.4, 0.12, 4.2, { mat: Mat.Wood, tint: 0x5a4030 });
