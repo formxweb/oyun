@@ -313,7 +313,7 @@ export function region09(entry: Exit): { data: RegionData; exit: Exit } {
   b.daily(G(25.5, 0).x, w2Top + 1, G(25.5, 0).z);
 
   const topY = sTop.top + 4;
-  pillar(b, y0 + 2, topY + 40, PR, PR, 9);
+  pillar(b, y0 - 1, topY + 1, PR, PR, 9);
   b.data.meta.topY = topY;
   return { data: b.build(), exit: { x: sTop.x, y: sTop.top, z: sTop.z, a: sTop.a } };
 }

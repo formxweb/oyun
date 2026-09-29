@@ -387,7 +387,7 @@ export function region04(entry: Exit): { data: RegionData; exit: Exit } {
   for (const d of [A1[3], A2[2], A2[8], C[2], C[7], C[10], D[2], F[2]]) b.daily(d.x, d.top + 1, d.z);
 
   const topY = fTop.top + 4;
-  pillar(b, y0 + 2, topY + 40, PR, PR, 4);
+  pillar(b, y0 - 1, topY + 1, PR, PR, 4);
   b.data.meta.topY = topY;
   return { data: b.build(), exit: { x: fTop.x, y: fTop.top, z: fTop.z, a: fTop.a } };
 }

@@ -396,7 +396,7 @@ export function region07(entry: Exit): { data: RegionData; exit: Exit } {
   b.daily(corbels[3].x, corbels[3].y + 1, corbels[3].z);
 
   const topY = landY + 4;
-  pillar(b, y0 + 2, topY + 40, PR, PR, 7);
+  pillar(b, y0 - 1, topY + 1, PR, PR, 7);
   b.data.meta.topY = topY;
   const exitA = Math.atan2(balc.x, balc.z) * (180 / Math.PI);
   return { data: b.build(), exit: { x: balc.x, y: landY, z: balc.z, a: exitA } };

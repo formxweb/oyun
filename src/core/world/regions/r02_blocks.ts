@@ -384,7 +384,7 @@ export function region02(gate: { x: number; y: number; z: number }): { data: Reg
   for (let i = 3; i < all.length; i += 8) b.daily(all[i].x, all[i].top + 1, all[i].z);
 
   const topY = crown.top + 6;
-  pillar(b, 100, topY + 40, PR, PR, 2);
+  pillar(b, 100, topY + 1, PR, PR, 2);
   b.data.meta.topY = topY;
   return { data: b.build(), exit: { x: crown.x, y: crown.top, z: crown.z, a: crown.a } };
 }

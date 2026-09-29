@@ -403,7 +403,7 @@ export function region06(entry: Exit): { data: RegionData; exit: Exit } {
   for (const d of [A[2], A[8], N[3], N[9], E[2], E[6], F[2], F[5]]) b.daily(d.x, d.top + 1, d.z);
 
   const topY = gate.top + 4;
-  pillar(b, y0 + 2, topY + 40, PR, PR, 6);
+  pillar(b, y0 - 1, topY + 1, PR, PR, 6);
   b.data.meta.topY = topY;
   return { data: b.build(), exit: { x: gate.x, y: gate.top, z: gate.z, a: gate.a } };
 }

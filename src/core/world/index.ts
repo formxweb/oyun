@@ -7,6 +7,7 @@ import { region06 } from './regions/r06_skyway';
 import { region07 } from './regions/r07_abandoned';
 import { region08 } from './regions/r08_storm';
 import { region09 } from './regions/r09_void';
+import { region10 } from './regions/r10_above';
 import type { RegionData } from './types';
 import { World } from './world';
 
@@ -24,7 +25,8 @@ export function buildRegions(): RegionData[] {
   const r7 = region07(r6.exit);
   const r8 = region08(r7.exit);
   const r9 = region09(r8.exit);
-  return [r1.data, r2.data, r3.data, r4.data, r5.data, r6.data, r7.data, r8.data, r9.data];
+  const r10 = region10(r9.exit);
+  return [r1.data, r2.data, r3.data, r4.data, r5.data, r6.data, r7.data, r8.data, r9.data, r10.data];
 }
 
 export function buildWorld(): World {
