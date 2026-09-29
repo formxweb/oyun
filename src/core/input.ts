@@ -28,7 +28,9 @@ const YAW_STEPS = 65536;
 
 export function quantizeAxis(v: number): number {
   const q = Math.round(Math.max(-1, Math.min(1, v)) * 127);
-  return q / 127;
+  // never -0: a replay stores the axis as an integer and reads back +0, and signed zeros steer
+  // differently (atan2), so live play must use exactly what a replay reproduces
+  return q === 0 ? 0 : q / 127;
 }
 
 export function quantizeYaw(yaw: number): number {

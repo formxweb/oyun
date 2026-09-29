@@ -229,10 +229,21 @@ export class App implements UIContext {
     this.touch?.layout();
     this.audio.setVolumes(s.audio);
     if (this.session) {
-      this.session.slowMoEnabled = s.access.slowMo;
+      this.session.slowMoEnabled = this.slowMoAllowed();
       if (this.run?.kind === 'story' && this.profile.data.journey) this.session.sim.cfg.recallAnywhere = this.profile.data.journey.difficulty === 'guided';
     }
     this.platform.setFullscreen(s.graphics.fullscreen);
+  }
+
+  /**
+   * Fall slow-motion is a presentation option, never on the clock: time trials, the Daily Summit
+   * and speedrun journeys always run in real time, whatever the setting.
+   */
+  private slowMoAllowed(): boolean {
+    const k = this.run?.kind;
+    if (k === 'trial' || k === 'daily') return false;
+    if (k === 'story' && this.profile.data.journey?.speedrun) return false;
+    return this.settings.value.access.slowMo;
   }
 
   private camSettings = (): CameraSettings => {
@@ -381,7 +392,7 @@ export class App implements UIContext {
       onEvent: (e, ss) => this.onEvent(e, ss),
       onTick: (ss, inp) => this.onTick(ss, inp),
     });
-    s.slowMoEnabled = this.settings.value.access.slowMo && this.run?.kind !== 'trial' && this.run?.kind !== 'daily';
+    s.slowMoEnabled = this.slowMoAllowed();
     this.session = s;
     this.state = 'play';
     this.rs.character.root.visible = true;
