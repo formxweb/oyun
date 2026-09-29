@@ -241,6 +241,7 @@ const UI: Record<string, string> = {
   'daily.gates': '{n} gates',
   'daily.resets': 'New route in {time}',
   'daily.best': 'Your best today: {score}',
+  'daily.none': 'No attempt yet today.',
   'daily.attempts': 'Attempts: {n}',
   'daily.mod.wind': 'Crosswind',
   'daily.mod.dusk': 'Dusk',
@@ -262,6 +263,8 @@ const UI: Record<string, string> = {
   'lb.empty': 'No entries yet. Be the first.',
   'lb.offline': 'Leaderboards need a connection. Your personal records are below.',
   'lb.personal': 'Personal records',
+  'lb.offline.short': 'Leaderboards need a connection.',
+  'lb.personal.none': 'No records yet.',
   'lb.race': 'Race ghost',
 
   'col.title': 'Collection',

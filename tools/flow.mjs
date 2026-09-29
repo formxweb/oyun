@@ -1,5 +1,6 @@
 // Scripted UI flow for smoke testing: node tools/flow.mjs <url> <outprefix> <steps-json>
-// steps: [{"click":"text"}|{"key":"Space","hold":ms}|{"wait":ms}|{"shot":"name"}|{"eval":"js"}]
+// steps: [{"click":"text"}|{"key":"Space","hold":ms}|{"wait":ms}|{"shot":"name"}|{"eval":"js"}|{"reload":true}]
+// {"seed":"completed"} writes a save with the journey finished (all regions reached) and reloads.
 import { chromium } from 'playwright';
 const [url, prefix, stepsJson, w = '1280', h = '720'] = process.argv.slice(2);
 const steps = JSON.parse(stepsJson);
@@ -17,6 +18,33 @@ for (const s of steps) {
   if (s.up) await page.keyboard.up(s.up);
   if (s.wait) await page.waitForTimeout(s.wait);
   if (s.shot) await page.screenshot({ path: `${prefix}${s.shot}.png` });
+  if (s.seed) {
+    // build the save in the page (same code the game uses), then install it before the next load
+    // so the running game's own save-on-exit cannot overwrite it
+    const enc = await page.evaluate(async (kind) => {
+      const m = await import('/src/client/services/save.ts');
+      const { MemoryKV } = await import('/src/client/services/storage.ts');
+      const d = m.newSave();
+      if (kind === 'completed' || kind === 'midway') {
+        d.regionsReached = kind === 'completed' ? 9 : 4;
+        d.journeysCompleted = kind === 'completed' ? 1 : 0;
+        d.journey = m.newJourney('standard', false);
+        d.journey.regionMax = d.regionsReached;
+      }
+      const kv = new MemoryKV();
+      new m.SaveManager(kv).save(d, true);
+      return kv.get('vertigo.save');
+    }, s.seed);
+    await page.addInitScript((v) => {
+      if (sessionStorage.getItem('flow.seeded') === v.slice(0, 64)) return;
+      sessionStorage.setItem('flow.seeded', v.slice(0, 64));
+      for (const k of Object.keys(localStorage)) if (k.startsWith('vertigo.save')) localStorage.removeItem(k);
+      localStorage.setItem('vertigo.save', v);
+    }, enc);
+    await page.reload({ waitUntil: 'load' });
+    await page.waitForTimeout(3000);
+  }
+  if (s.reload) { await page.reload({ waitUntil: 'load' }); await page.waitForTimeout(3000); }
   if (s.eval) console.log('eval:', JSON.stringify(await page.evaluate(s.eval)));
 }
 console.log(logs.slice(0, 30).join('\n'));

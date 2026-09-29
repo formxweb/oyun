@@ -161,6 +161,9 @@ body {
   flex-direction: column;
   justify-content: center;
   max-width: 34rem;
+  max-height: 100%;
+  overflow-y: auto;
+  scrollbar-width: none;
 }
 .btn {
   appearance: none;
@@ -929,6 +932,23 @@ input[type='range'] {
   }
   .setting {
     grid-template-columns: 1fr minmax(8rem, 12rem);
+  }
+}
+/* phones in landscape: the main menu goes to two columns so everything fits without scrolling */
+@media (max-height: 520px) {
+  .game-tag {
+    display: none;
+  }
+  .menu.main {
+    display: grid;
+    grid-template-columns: repeat(2, minmax(12.5rem, auto));
+    column-gap: 0.6rem;
+  }
+  .menu.main .btn {
+    font-size: 1rem;
+  }
+  .menu-col {
+    max-width: none;
   }
 }
 @media (max-height: 460px) {

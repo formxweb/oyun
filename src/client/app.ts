@@ -108,7 +108,6 @@ export class App implements UIContext {
   }
 
   private createStore(): IStoreService {
-    const forced = new URLSearchParams(location.search).get('mockstore');
     if (this.platform.kind === 'android') {
       return new GooglePlayStoreService(this.platform.plugin<VertigoBillingPlugin>('VertigoBilling'), this.net, () => this.net.account?.playerId ?? this.profile.data.profileId);
     }
@@ -120,7 +119,11 @@ export class App implements UIContext {
         return r.ok ? ((await r.json()) as Record<string, string>) : null;
       });
     }
-    if (import.meta.env.DEV || import.meta.env.VITE_STORE === 'mock' || forced) return new MockStoreService(this.platform.kv, forced);
+    // The test store exists only in development and QA builds; a release web build has no store
+    // (nothing can be bought there), whatever the URL says.
+    if (import.meta.env.DEV || import.meta.env.VITE_STORE === 'mock') {
+      return new MockStoreService(this.platform.kv, new URLSearchParams(location.search).get('mockstore'));
+    }
     return new NoStoreService();
   }
 

@@ -1,6 +1,7 @@
 import { ACHIEVEMENTS } from '../../core/catalog/achievements';
 import { COSMETICS, SLOTS, type Cosmetic, type Slot } from '../../core/catalog/cosmetics';
 import { PRODUCTS, PRODUCT_BY_SKU } from '../../core/catalog/store';
+import { weekKey } from '../../core/daily';
 import type { CollectibleKind } from '../../core/world/types';
 import { ACTIONS, type Action } from '../input/input';
 import { fmtDuration, fmtNumber, fmtTime, getLang, LANGS, setLang, t } from '../i18n/i18n';
@@ -141,7 +142,7 @@ const mainMenu: Build = (ctx, ui) => {
         h('div', { class: 'game-sub' }, t('game.subtitle')),
         h('div', { class: 'game-tag' }, t('game.tagline')),
       ),
-      h('nav', { class: 'menu' }, items),
+      h('nav', { class: 'menu main' }, items),
     ),
     h('div', { class: 'spacer' }),
     h('div', { style: { alignSelf: 'flex-end', textAlign: 'right' }, class: 'faint' }, btn(t('menu.credits'), () => ui.push('credits'), { cls: 'small' }), h('div', { style: { fontSize: '0.75rem', marginTop: '0.4rem' } }, `v1.0 · ${ctx.platformName}`)),
@@ -702,7 +703,9 @@ const store: Build = (ctx, ui) => {
     for (const prod of PRODUCTS) {
       const sp = priceOf.get(prod.sku);
       const owned = prod.grants.every((g) => ctx.profile.data.owned.includes(g));
-      const contents = prod.bundle ? t('store.bundle.contains', { items: prod.grants.map((g) => t('cos.' + g)).join(', ') }) : t('cos.' + prod.grants[0]);
+      // a single item says what kind of thing it is; a bundle lists what is inside
+      const slot = prod.grants[0].split('.')[0];
+      const contents = prod.bundle ? t('store.bundle.contains', { items: prod.grants.map((g) => t('cos.' + g)).join(', ') }) : t(slot === 'title' ? 'cust.title.slot' : 'cust.' + slot);
       const card = h(
         'button',
         { class: 'card' + (owned ? ' selected' : ''), type: 'button' },
@@ -865,7 +868,7 @@ const daily: Build = (ctx, ui) => {
   const left = Math.max(0, (next.getTime() - now.getTime()) / 1000);
   const lbBox = h('div', { class: 'scroll', style: { flex: '1', minHeight: '10rem' } }, h('div', { class: 'muted' }, t('common.loading')));
   if (route) {
-    ctx.leaderboard('daily', route.date, 'global').then((rows) => fillBoard(lbBox, rows, ctx));
+    ctx.leaderboard('daily', route.date, 'global').then((rows) => fillBoard(lbBox, rows, ctx, undefined, 'lb.offline.short'));
   }
   return h(
     'div',
@@ -881,7 +884,7 @@ const daily: Build = (ctx, ui) => {
             h('p', null, t('daily.route', { region: t('region.' + route.region) })),
             h('p', { class: 'muted' }, `${t('daily.gates', { n: route.gates.length + 1 })} · ${t('daily.mod.' + route.modifier)}`),
             h('p', { class: 'faint' }, t('daily.resets', { time: `${Math.floor(left / 3600)}h ${Math.floor((left % 3600) / 60)}m` })),
-            rec ? h('p', null, t('daily.best', { score: fmtNumber(rec.bestScore) }), ' · ', t('daily.attempts', { n: rec.attempts })) : null,
+            h('p', null, rec ? [t('daily.best', { score: fmtNumber(rec.bestScore) }), ' · ', t('daily.attempts', { n: rec.attempts })] : t('daily.none')),
             btn(t('common.start'), () => ctx.startDaily(), { primary: true, cls: 'box' }),
           )
         : h('p', { class: 'muted' }, t('menu.locked.ngplus')),
@@ -891,10 +894,10 @@ const daily: Build = (ctx, ui) => {
   );
 };
 
-function fillBoard(box: HTMLElement, rows: import('./context').LeaderboardEntry[] | null, ctx: UIContext, trialId?: string): void {
+function fillBoard(box: HTMLElement, rows: import('./context').LeaderboardEntry[] | null, ctx: UIContext, trialId?: string, offlineKey = 'lb.offline'): void {
   clear(box);
   if (rows === null) {
-    box.append(h('p', { class: 'muted' }, t('lb.offline')));
+    box.append(h('p', { class: 'muted' }, t(offlineKey)));
     return;
   }
   if (!rows.length) {
@@ -919,16 +922,30 @@ let lbScope: 'global' | 'friends' = 'global';
 let lbTrial = 'trial.r1';
 
 const leaderboards: Build = (ctx, ui) => {
-  const box = h('div', { class: 'scroll', style: { flex: '1' } }, h('div', { class: 'muted' }, t('common.loading')));
+  const box = h('div', null, h('div', { class: 'muted' }, t('common.loading')));
   const route = ctx.daily();
   const id = lbKind === 'trial' ? lbTrial : lbKind === 'daily' ? route?.date ?? '' : lbKind === 'weekly' ? route?.week ?? '' : 'any';
   ctx.leaderboard(lbKind, id, lbScope).then((rows) => fillBoard(box, rows, ctx, lbKind === 'trial' ? lbTrial : undefined));
+  // the player's own records for the board being shown, available offline
   const personal = h('div', null, h('h3', null, t('lb.personal')));
-  for (const tr of ctx.world.trials) {
-    const rec = ctx.profile.data.trials[tr.id];
-    if (!rec || !isFinite(rec.bestTime)) continue;
-    personal.append(h('div', { class: 'setting' }, h('label', null, h('span', { class: 'medal ' + rec.medal }), t(tr.nameKey)), h('div', { class: 'control' }, fmtTime(rec.bestTime))));
+  const line = (label: Node | string, value: string) => personal.append(h('div', { class: 'setting' }, h('label', null, label), h('div', { class: 'control' }, value)));
+  const data = ctx.profile.data;
+  if (lbKind === 'trial') {
+    for (const tr of ctx.world.trials) {
+      const rec = data.trials[tr.id];
+      if (!rec || !isFinite(rec.bestTime)) continue;
+      line(h('span', null, h('span', { class: 'medal ' + rec.medal }), t(tr.nameKey)), fmtTime(rec.bestTime));
+    }
+  } else if (lbKind === 'daily') {
+    const rec = route ? data.daily[route.date] : undefined;
+    if (rec) line(t('daily.route', { region: t('region.' + route!.region) }), fmtNumber(rec.bestScore));
+  } else if (lbKind === 'weekly') {
+    const days = Object.entries(data.daily).filter(([date]) => route && weekKey(new Date(date + 'T12:00:00Z')) === route.week);
+    if (days.length) line(t('lb.weekly'), fmtNumber(days.reduce((m, [, r]) => m + r.bestScore, 0)));
+  } else if (data.speedrunBest !== null) {
+    line(t('lb.speedrun'), fmtTime(data.speedrunBest));
   }
+  if (personal.childElementCount === 1) personal.append(h('p', { class: 'muted' }, t('lb.personal.none')));
   const trialPick =
     lbKind === 'trial'
       ? row(
@@ -979,8 +996,7 @@ const leaderboards: Build = (ctx, ui) => {
         ),
       ),
       trialPick,
-      box,
-      personal,
+      h('div', { class: 'scroll', style: { flex: '1' } }, box, personal),
     ),
   );
 };

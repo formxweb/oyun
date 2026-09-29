@@ -241,6 +241,7 @@ const UI: Record<string, string> = {
   'daily.gates': '{n} kapı',
   'daily.resets': 'Yeni rota: {time} sonra',
   'daily.best': 'Bugünkü en iyin: {score}',
+  'daily.none': 'Bugün henüz deneme yok.',
   'daily.attempts': 'Deneme: {n}',
   'daily.mod.wind': 'Yan rüzgâr',
   'daily.mod.dusk': 'Alacakaranlık',
@@ -262,6 +263,8 @@ const UI: Record<string, string> = {
   'lb.empty': 'Henüz kimse yok. İlk sen ol.',
   'lb.offline': 'Sıralamalar için bağlantı gerekir. Kişisel rekorların aşağıda.',
   'lb.personal': 'Kişisel rekorlar',
+  'lb.offline.short': 'Sıralamalar için bağlantı gerekir.',
+  'lb.personal.none': 'Henüz rekor yok.',
   'lb.race': 'Hayaletle yarış',
 
   'col.title': 'Koleksiyon',
