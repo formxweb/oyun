@@ -24,6 +24,8 @@ export interface SimConfig {
   /** Daily Summit / custom gate list (overrides trial gates when provided). */
   gates?: { pos: V3; r: number }[];
   finish?: { pos: V3; r: number };
+  /** Daily Summit crosswind modifier: steady gusting acceleration (m/s^2). */
+  wind?: { x: number; z: number };
 }
 
 export interface SimStats {
@@ -334,6 +336,11 @@ export class Simulation {
     if (area !== null && area !== this.area) {
       this.area = area;
       this.events.push({ k: 'area', key: area });
+    }
+    if (this.cfg.wind) {
+      const g = 0.6 + 0.4 * dsin(t * 0.9);
+      e.ax += this.cfg.wind.x * g;
+      e.az += this.cfg.wind.z * g;
     }
     // The Wind Wall: an invisible-free boundary made of visible air currents that keeps
     // climbers inside the city's footprint so falls always land on architecture.
