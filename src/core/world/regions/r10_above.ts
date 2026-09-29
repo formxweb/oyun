@@ -160,7 +160,8 @@ export function region10(entry: Exit): { data: RegionData; exit: Exit } {
   b.route(L(0, -4.4).x, cy, L(0, -4.4).z, 'run');
   b.route(L(0, -0.6).x, cy, L(0, -0.6).z, 'run');
   const sit = L(0, 0.9);
-  b.trigger('t.r10.cradle', 'r10_cradle', { type: 'enter', min: v3(sit.x - 1.2, cy - 0.2, sit.z - 1.2), max: v3(sit.x + 1.2, cy + 2, sit.z + 1.2) }, { storyOnly: true });
+  // sitting down in the Cradle ends every journey, New Game+ included
+  b.trigger('t.r10.cradle', 'r10_cradle', { type: 'enter', min: v3(sit.x - 1.2, cy - 0.2, sit.z - 1.2), max: v3(sit.x + 1.2, cy + 2, sit.z + 1.2) });
   b.route(sit.x, cy, sit.z, 'run', { expect: 'r10_cradle' });
   // beyond the window, the edge — and far below, the cloud sea
   b.collect('e.r10.last', 'echo', L(0, 16).x, cy - 30, L(0, 16).z);

@@ -1,7 +1,7 @@
 import { readFileSync } from 'node:fs';
 import { describe, expect, it } from 'vitest';
 import { ACHIEVEMENTS } from '../src/core/catalog/achievements';
-import { allMemoryFlags } from '../src/core/world/memory';
+import { allMemoryFlags, JOURNEY_END_FLAG } from '../src/core/world/memory';
 import { EN } from '../src/client/i18n/en';
 import { TR } from '../src/client/i18n/tr';
 import { dailyRoute } from '../src/core/daily';
@@ -89,8 +89,12 @@ describe('world content', () => {
     expect(taught | 1 | 2).toBe(16383);
   });
 
-  it('the Cradle ends the journey', () => {
-    expect(world.triggers.some((t) => t.flag === 'r10_cradle')).toBe(true);
+  it('the Cradle ends every journey, New Game+ included', () => {
+    const cradle = world.triggers.filter((t) => t.flag === JOURNEY_END_FLAG);
+    expect(cradle.length).toBe(1);
+    expect(cradle[0].storyOnly).toBe(false);
+    // New Game+ starts remembered, but not already finished
+    expect(allMemoryFlags(world)).not.toContain(JOURNEY_END_FLAG);
   });
 });
 
@@ -140,7 +144,7 @@ describe('achievements', () => {
   });
 
   it('memory flags that unlock achievements exist in the world', () => {
-    const flags = new Set(allMemoryFlags(world));
+    const flags = new Set([...allMemoryFlags(world), JOURNEY_END_FLAG]);
     const used = [...src.matchAll(/flag === '([a-z0-9_]+)'\) this\.unlock/g)].map((m) => m[1]);
     expect(used.length).toBeGreaterThan(3);
     expect(used.filter((f) => !flags.has(f))).toEqual([]);

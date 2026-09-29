@@ -12,9 +12,7 @@ export interface ProfileHooks {
   onUnlockCosmetic?: (id: string) => void;
 }
 
-import { allMemoryFlags } from '../../core/world/memory';
-
-export { allMemoryFlags };
+import { newGamePlusFlags } from '../../core/world/memory';
 
 /**
  * The grandparent's letter (f0) is not one of the thirty Letters Down: it is found at the
@@ -42,7 +40,7 @@ export class Profile {
 
   startJourney(difficulty: Difficulty, ngPlus: boolean, speedrun = false): void {
     const j = newJourney(difficulty, ngPlus, speedrun, ngPlus ? ALL_ABILITIES : undefined);
-    if (ngPlus) j.flags = allMemoryFlags(this.world);
+    if (ngPlus) j.flags = newGamePlusFlags(this.world);
     this.data.journey = j;
   }
 

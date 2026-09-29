@@ -53,7 +53,7 @@ const UI: Record<string, string> = {
   'new.overwrite': 'Starting a new journey replaces your current one. Your collection, trials and cosmetics are kept.',
   'new.begin': 'Begin',
   'ngplus.title': 'New Game+ · The Remembered City',
-  'ngplus.desc': 'The city remembers you. Every change you caused is already there, all techniques are yours, dusk has fallen, and the Keepers’ Bells hang on the hardest routes.',
+  'ngplus.desc': 'The city remembers you. What fell stays fallen and every Fall Line you found still shines; only its machines wait to be worked again. All techniques are yours, dusk has fallen, and the Keepers’ Bells hang on the hardest routes.',
 
   'pause.title': 'Paused',
   'pause.resume': 'Resume',

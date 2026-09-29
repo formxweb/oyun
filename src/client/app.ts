@@ -27,7 +27,8 @@ import { CameraRig, type CameraSettings } from './render/camera';
 import { DEFAULT_LOOK, type Look } from './render/character';
 import { RenderSystem } from './render/renderer';
 import { Online } from './services/online';
-import { GRANDPARENT_LETTER, allMemoryFlags, Profile } from './services/profile';
+import { GRANDPARENT_LETTER, Profile } from './services/profile';
+import { memoryFlagsBelow } from '../core/world/memory';
 import { migrate, SaveManager, validate, type SaveData } from './services/save';
 import { isTouchDevice, SettingsStore } from './services/settings';
 import { Session } from './session';
@@ -560,7 +561,8 @@ export class App implements UIContext {
     this.makeSession({
       mode: 'story',
       abilities: ALL_ABILITIES,
-      flags: allMemoryFlags(this.world),
+      // the region as first climbed, like a time trial: its machines are worked on the way up
+      flags: memoryFlagsBelow(this.world.regionData, region),
       collected: this.world.collectibles.map((c) => c.id),
       litAnchors: [],
       lastAnchor: null,

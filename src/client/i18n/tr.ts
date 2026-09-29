@@ -53,7 +53,7 @@ const UI: Record<string, string> = {
   'new.overwrite': 'Yeni bir yolculuk mevcut yolculuğunun yerini alır. Koleksiyonun, yarışların ve kıyafetlerin korunur.',
   'new.begin': 'Başla',
   'ngplus.title': 'Yeni Oyun+ · Hatırlayan Şehir',
-  'ngplus.desc': 'Şehir seni hatırlıyor. Yol açtığın her değişiklik zaten orada, bütün teknikler senin, alacakaranlık çöktü ve Bekçilerin Çanları en zor rotalarda asılı.',
+  'ngplus.desc': 'Şehir seni hatırlıyor. Yıkılan yıkık kaldı, bulduğun her Düşüş Ağı hâlâ parlıyor; yalnızca makineleri yeniden çalıştırılmayı bekliyor. Bütün teknikler senin, alacakaranlık çöktü ve Bekçilerin Çanları en zor rotalarda asılı.',
 
   'pause.title': 'Duraklatıldı',
   'pause.resume': 'Devam Et',

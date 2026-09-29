@@ -4,6 +4,7 @@ import { Simulation, type SimConfig, type SimMode } from './sim';
 import { trialScore, medalFor, type Medal } from './scoring';
 import { T } from './tuning';
 import type { DailyRoute } from './daily';
+import { JOURNEY_END_FLAG } from './world/memory';
 import { BASE_ABILITIES, type TrialDef } from './world/types';
 import type { World } from './world/world';
 
@@ -318,7 +319,7 @@ export class SpeedrunCheck {
     const end = Math.min(this.r.inputs.length, this.i + budget);
     for (; this.i < end; this.i++) {
       sim.step(this.r.inputs[this.i]);
-      if (sim.st.flags.has(SPEEDRUN_END_FLAG)) {
+      if (sim.st.flags.has(JOURNEY_END_FLAG)) {
         this.result = { ok: true, seconds: sim.tick / 120, ticks: sim.tick };
         return this.result;
       }
@@ -337,8 +338,6 @@ export function verifySpeedrun(world: World, r: Replay): SpeedrunResult {
   return c.advance(Infinity)!;
 }
 
-/** The memory flag set when the player enters the Cradle: the journey's (and a speedrun's) end. */
-export const SPEEDRUN_END_FLAG = 'r10_cradle';
 
 const verifyFail: VerifyResult = { ok: false, finishTick: 0, seconds: 0, falls: 0, maxMult: 1, efficiency: 0, style: 0, score: 0, medal: 'none', splits: [], masterGates: 0 };
 

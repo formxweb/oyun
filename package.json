@@ -14,7 +14,8 @@
     "verify-world": "tsx tools/verify_world.ts",
     "verify-trials": "tsx tools/trial_times.ts",
     "verify-journey": "tsx tools/journey.ts",
-    "verify-daily": "tsx tools/daily_check.ts"
+    "verify-daily": "tsx tools/daily_check.ts",
+    "verify-all": "tsx tools/verify_world.ts && tsx tools/trial_times.ts && tsx tools/journey.ts && tsx tools/journey.ts --ngplus && tsx tools/daily_check.ts 30"
   },
   "dependencies": {
     "@capacitor/core": "^8.5.2",
