@@ -281,6 +281,21 @@ export class RegionBuilder {
     return this.solid(Shape.Box, (x1 + x2) / 2, top - thick / 2, (z1 + z2) / 2, len / 2, thick / 2, width / 2, { ...o, yaw: o.yaw ?? quantYaw(yaw) });
   }
 
+  /**
+   * Walkable slope from (x1,z1) at height y1 to (x2,z2) at height y2, `width` wide.
+   * The wedge's flat bottom sits at the lower height.
+   */
+  rampBetween(x1: number, z1: number, y1: number, x2: number, z2: number, y2: number, width: number, o: SolidOpts = {}): Solid {
+    const dx = x2 - x1;
+    const dz = z2 - z1;
+    const len = Math.sqrt(dx * dx + dz * dz);
+    const up = y2 >= y1;
+    const yaw = quantYaw(datan2(-dz, dx));
+    const lo = Math.min(y1, y2);
+    const h = Math.max(0.05, Math.abs(y2 - y1));
+    return this.solid(Shape.Ramp, (x1 + x2) / 2, lo + h / 2, (z1 + z2) / 2, len / 2, h / 2, width / 2, { ...o, yaw }, up ? Slope.PosX : Slope.NegX);
+  }
+
   /** Ramp: bottom-centre, size, and which side is high. */
   ramp(x: number, y0: number, z: number, w: number, h: number, d: number, slope: Slope, o: SolidOpts = {}): Solid {
     return this.solid(Shape.Ramp, x, y0 + h / 2, z, w / 2, h / 2, d / 2, o, slope);

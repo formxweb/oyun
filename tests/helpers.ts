@@ -2,7 +2,7 @@ import { ALL_ABILITIES, type Atmosphere } from '../src/core/world/types';
 import { RegionBuilder } from '../src/core/world/builder';
 import { World } from '../src/core/world/world';
 import { Simulation, type SimConfig } from '../src/core/sim';
-import { Btn, quantizeInput, type InputFrame } from '../src/core/input';
+import { quantizeInput, type InputFrame } from '../src/core/input';
 import { v3 } from '../src/core/math';
 
 export const ATM: Atmosphere = {
@@ -46,4 +46,4 @@ export function run(s: Simulation, n: number, i: InputFrame | ((t: number) => In
   for (let t = 0; t < n; t++) s.step(typeof i === 'function' ? i(t) : i);
 }
 
-export const B = Btn;
+export const B = { Jump: 1, Sprint: 2, Crouch: 4, Interact: 8, Recall: 16 } as const;
