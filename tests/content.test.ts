@@ -1,0 +1,91 @@
+import { describe, expect, it } from 'vitest';
+import { EN } from '../src/client/i18n/en';
+import { TR } from '../src/client/i18n/tr';
+import { buildWorld } from '../src/core/world/index';
+
+/**
+ * Every piece of text the world can show must exist in every language, and the two languages
+ * must cover the same keys (no hard-coded strings, no half-translated screens).
+ */
+const world = buildWorld();
+
+function worldKeys(): string[] {
+  const keys = new Set<string>();
+  world.regions.forEach((_, i) => {
+    keys.add(`region.${i}`);
+    keys.add(`region.${i}.sub`);
+  });
+  for (const c of world.collectibles) {
+    if (c.kind === 'fragment' || c.kind === 'record') {
+      keys.add(`${c.id}.title`);
+      keys.add(`${c.id}.body`);
+    } else if (c.kind === 'echo') keys.add(c.id);
+    else if (c.kind === 'lesson') {
+      keys.add(`lesson.${c.id}`);
+      keys.add(`ability.${c.ability ?? 0}`);
+    }
+  }
+  for (const a of world.anchors) keys.add(a.nameKey);
+  for (const z of world.zones) if (z.kind === 'area' && z.key) keys.add(z.key);
+  for (const tr of world.triggers) if (tr.textKey) keys.add(tr.textKey);
+  for (const t of world.trials) keys.add(t.nameKey);
+  return [...keys];
+}
+
+describe('localization', () => {
+  it('English and Turkish cover exactly the same keys', () => {
+    const en = Object.keys(EN).sort();
+    const tr = Object.keys(TR).sort();
+    expect(en.filter((k) => !(k in TR))).toEqual([]);
+    expect(tr.filter((k) => !(k in EN))).toEqual([]);
+  });
+
+  it('no text is empty', () => {
+    expect(Object.entries(EN).filter(([, v]) => !v.trim()).map(([k]) => k)).toEqual([]);
+    expect(Object.entries(TR).filter(([, v]) => !v.trim()).map(([k]) => k)).toEqual([]);
+  });
+
+  it('every key the world refers to has text in both languages', () => {
+    const missing = worldKeys().filter((k) => !(k in EN) || !(k in TR));
+    expect(missing).toEqual([]);
+  });
+
+  it('placeholders match between languages', () => {
+    const ph = (s: string) => (s.match(/\{[a-zA-Z]+\}/g) ?? []).sort().join(',');
+    const bad = Object.keys(EN).filter((k) => k in TR && ph(EN[k]) !== ph(TR[k]));
+    expect(bad).toEqual([]);
+  });
+});
+
+describe('world content', () => {
+  it('has thirty letters plus the letter at the Cradle, one per generation', () => {
+    const frags = world.collectibles.filter((c) => c.kind === 'fragment').map((c) => c.id);
+    expect(new Set(frags).size).toBe(frags.length);
+    for (let g = 0; g <= 30; g++) expect(frags).toContain(`f${g}`);
+  });
+
+  it('every collectible id is unique', () => {
+    const ids = world.collectibles.map((c) => c.id);
+    expect(new Set(ids).size).toBe(ids.length);
+  });
+
+  it('every region has anchors, a trial, a master route and daily gates', () => {
+    world.regionData.forEach((r) => {
+      expect(r.anchors.length).toBeGreaterThan(1);
+      expect(r.trials.length).toBe(1);
+      expect(r.trials[0].master.length).toBeGreaterThan(0);
+      expect(r.dailyGates.length).toBeGreaterThanOrEqual(4);
+      expect(r.route.length).toBeGreaterThan(10);
+    });
+  });
+
+  it('every ability is taught by a lesson somewhere', () => {
+    const taught = world.collectibles.filter((c) => c.kind === 'lesson').reduce((m, c) => m | (c.ability ?? 0), 0);
+    // Sprint and Mantle are known from the start
+    expect(taught | 1 | 2).toBe(16383);
+  });
+
+  it('the Cradle ends the journey', () => {
+    expect(world.triggers.some((t) => t.flag === 'r10_cradle')).toBe(true);
+  });
+});

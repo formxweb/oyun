@@ -88,7 +88,6 @@ const UI: Record<string, string> = {
   'hud.readLetter': '{key} Read',
   'hud.region': 'Region {n}',
   'hud.memory': 'The city remembers',
-  'hud.newArea': '',
   'hud.speed': '{v} m/s',
   'hud.checkpointTrial': 'Gate {n}/{total}',
   'hud.master': 'Master gate',

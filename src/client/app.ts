@@ -640,6 +640,7 @@ export class App implements UIContext {
     });
     this.audio.setSlide(p.mode === Mode.Slide, Math.hypot(p.vx, p.vz));
     this.rs.weather.update(this.rs.atm.weather, this.rs.atm.weather > 0 ? 1 : 0, this.rig.camera.position, new THREE.Vector3(p.vx * 0.2 + 2, 0, p.vz * 0.2 + 1), s.time, this.rs.particles.budget);
+    this.rs.zoneFx.update(dt, this.rig.camera.position, sim.tick / TICK_RATE, sim.st, s.paused ? 0 : this.rs.particles.budget);
     // autosave
     if (run.kind === 'story' && !s.paused) {
       this.autosaveT += dt;
@@ -817,6 +818,7 @@ export class App implements UIContext {
         break;
       case 'lightning': {
         const z = this.world.zones[e.zone];
+        this.rs.zoneFx.bolt(z);
         const cx = (z.min.x + z.max.x) / 2;
         const cy = (z.min.y + z.max.y) / 2;
         const cz = (z.min.z + z.max.z) / 2;

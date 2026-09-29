@@ -234,6 +234,19 @@ export function beamArc(b: RegionBuilder, a0: number, a1: number, r: number, y0:
     const e = ext / l;
     const so: SolidOpts = convSpeed ? { ...o, flags: (o.flags ?? 0) | SolidFlag.Conveyor, conv: [(dx / l) * convSpeed, (dz / l) * convSpeed] } : o;
     b.beamBetween(p0.x - dx * e, p0.z - dz * e, ya - (yb - ya) * e, p1.x + dx * e, p1.z + dz * e, yb + (yb - ya) * e, width, so);
+    if (convSpeed && i % 2 === 0) b.glyph('arrow', (p0.x + p1.x) / 2, (ya + yb) / 2 + 0.03, (p0.z + p1.z) / 2, Math.min(0.9, width * 1.2), Math.atan2(dx * Math.sign(convSpeed), dz * Math.sign(convSpeed)), { up: true, tint: 0xd8b040 });
+  }
+}
+
+/** Painted arrows along a conveyor belt showing which way it runs. */
+function conveyorArrows(b: RegionBuilder, x: number, top: number, z: number, conv: [number, number], len: number): void {
+  const sp = Math.hypot(conv[0], conv[1]) || 1;
+  const ux = conv[0] / sp;
+  const uz = conv[1] / sp;
+  const n = Math.max(1, Math.floor(len / 2.2));
+  for (let i = 0; i < n; i++) {
+    const k = (i + 0.5) / n - 0.5;
+    b.glyph('arrow', x + ux * k * len, top + 0.01, z + uz * k * len, 0.9, Math.atan2(ux, uz), { up: true, tint: 0xd8b040 });
   }
 }
 
@@ -381,6 +394,7 @@ export function helix(
     const gridYaw = Math.round(yaw / (Math.PI / 2)) * (Math.PI / 2);
     const deckYaw = s.move === 'turn' ? gridYaw : yaw;
     b.plat(p.x, top, p.z, len, wid, 0.25, { mat, tint, yaw: deckYaw, tag: s.tag, flags: (s.flags ?? 0) | (conv ? SolidFlag.Conveyor : 0), conv });
+    if (conv) conveyorArrows(b, p.x, top, p.z, conv, len);
     const prev = out[out.length - 1];
     if (prev && s.move === 'ramp') {
       const sx = prev.x + tx * (prev.len / 2);

@@ -88,7 +88,6 @@ const UI: Record<string, string> = {
   'hud.readLetter': '{key} Oku',
   'hud.region': 'Bölge {n}',
   'hud.memory': 'Şehir hatırlıyor',
-  'hud.newArea': '',
   'hud.speed': '{v} m/sn',
   'hud.checkpointTrial': 'Kapı {n}/{total}',
   'hud.master': 'Usta kapısı',

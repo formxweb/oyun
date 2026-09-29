@@ -383,6 +383,48 @@ export function region02(gate: { x: number; y: number; z: number }): { data: Reg
   });
   for (let i = 3; i < all.length; i += 8) b.daily(all[i].x, all[i].top + 1, all[i].z);
 
+  // ------------------------------------------------------------------ the service lift
+  // Hung from the Machine's winch: dead until the Great Winch is released, far above. Then it
+  // runs from the Undercroft straight up to Crown Row, for anyone climbing back.
+  {
+    const st = b.data.route[1];
+    const en = b.data.route[b.data.route.length - 2];
+    const la = (Math.atan2(st.p.x, st.p.z) * 180) / Math.PI;
+    const lr = Math.hypot(st.p.x, st.p.z) - 6.4;
+    const lp = polar(la, lr);
+    const lyaw = quantYaw(rad(la));
+    const rise = en.p.y - st.p.y;
+    b.mover(
+      { kind: 'path', origin: v3(lp.x, st.p.y, lp.z), points: [v3(0, 0, 0), v3(0, rise, 0)], segTime: [22], pause: 4, activeFlag: 'r4_winch' },
+      () => {
+        b.plat(0, 0, 0, 3.2, 3.2, 0.25, { mat: Mat.Metal, tint: 0x4a4e54, yaw: lyaw });
+        for (const [dx, dz] of [
+          [-1.5, -1.5],
+          [1.5, 1.5],
+          [-1.5, 1.5],
+          [1.5, -1.5],
+        ]) b.decor('box', dx, 1.4, dz, 0.1, 2.8, 0.1, { mat: Mat.Brass, tint: 0xb08a3e });
+      },
+    );
+    b.cable(v3(lp.x, en.p.y + 20, lp.z), v3(lp.x, st.p.y + 2.8, lp.z), 0, Mat.Metal, 0x2a2a2a);
+    const bridge = (y: number, deckR: number) => {
+      const inner = lr + 1.7;
+      const outer = deckR - 1.2;
+      const m = polar(la, (inner + outer) / 2);
+      b.plat(m.x, y, m.z, outer - inner + 0.2, 2.2, 0.3, { mat: Mat.Metal, tint: 0x5a5e62, yaw: quantYaw(rad(la + 90)) });
+      return m;
+    };
+    const lo = bridge(st.p.y, Math.hypot(st.p.x, st.p.z));
+    const hi = bridge(en.p.y, Math.hypot(en.p.x, en.p.z));
+    b.branch('secret.r2.lift', 'secret', () => {
+      b.route(st.p.x, st.p.y, st.p.z, 'run', { flags: ['r4_winch'] });
+      b.route(lo.x, st.p.y, lo.z, 'run', { flags: ['r4_winch'] });
+      b.route(lp.x, st.p.y, lp.z, 'run', { flags: ['r4_winch'] });
+      b.route(lp.x, en.p.y, lp.z, 'ride', { flags: ['r4_winch'] });
+      b.route(hi.x, en.p.y, hi.z, 'run', { flags: ['r4_winch'] });
+    });
+  }
+
   const topY = crown.top + 6;
   pillar(b, 100, topY + 1, PR, PR, 2);
   b.data.meta.topY = topY;

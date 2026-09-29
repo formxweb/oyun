@@ -5,6 +5,7 @@ import { atmosphereAt } from './atmosphere';
 import { Character, DEFAULT_LOOK, type Look } from './character';
 import { Entities } from './entities';
 import { Particles, Rings, Weather } from './fx';
+import { ZoneFx } from './zonefx';
 import { createWorldUniforms, type WorldUniforms } from './materials';
 import { Sky } from './sky';
 import { WorldView } from './worldview';
@@ -53,6 +54,7 @@ export class RenderSystem {
   readonly entities: Entities;
   readonly character: Character;
   readonly particles: Particles;
+  readonly zoneFx: ZoneFx;
   readonly weather: Weather;
   readonly rings: Rings;
   readonly ghosts: Character[] = [];
@@ -96,6 +98,8 @@ export class RenderSystem {
     this.scene.add(this.weather.mesh);
     this.rings = new Rings();
     this.scene.add(this.rings.group);
+    this.zoneFx = new ZoneFx(world, this.particles);
+    this.scene.add(this.zoneFx.group);
     this.atm = world.regions[0].atmosphere;
     this.applyQuality();
   }
