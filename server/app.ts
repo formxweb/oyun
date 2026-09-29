@@ -31,6 +31,8 @@ export interface ServerOptions {
   tokenDays?: number;
   /** background jobs (purchase reconciliation, speedrun verification); off in some tests */
   jobs?: boolean;
+  /** requests per minute: logins per IP, run submissions per player */
+  limits?: { login?: number; runs?: number };
   log?: (...a: unknown[]) => void;
 }
 
@@ -39,6 +41,8 @@ export interface GameServer {
   world: World;
   /** process queued speedrun verifications now (tests) */
   drainSpeedruns(): Promise<void>;
+  /** run purchase reconciliation and refund checks now (tests; normally on timers) */
+  runJobs(): Promise<void>;
   close(): Promise<void>;
 }
 
@@ -58,8 +62,8 @@ export function createGameServer(opt: ServerOptions): GameServer {
   const hash = worldHash(world);
   const canonical = allMemoryFlags(world);
   const dailyCache = new Map<string, DailyRoute>();
-  const loginLimit = new RateLimiter(20);
-  const runLimit = new RateLimiter(30);
+  const loginLimit = new RateLimiter(opt.limits?.login ?? 20);
+  const runLimit = new RateLimiter(opt.limits?.runs ?? 30);
   const anyLimit = new RateLimiter(600);
   const router = new Router();
   const inFlight = new Set<string>();
@@ -651,6 +655,10 @@ export function createGameServer(opt: ServerOptions): GameServer {
   return {
     server,
     world,
+    async runJobs() {
+      await reconcile();
+      await refunds();
+    },
     async drainSpeedruns() {
       if (!speedrunBusy) speedrunBusy = processSpeedruns().finally(() => (speedrunBusy = null));
       await speedrunBusy;
