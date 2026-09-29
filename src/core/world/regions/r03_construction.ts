@@ -164,7 +164,6 @@ export function region03(entry: Exit): { data: RegionData; exit: Exit } {
       b.decor('box', jm.x, 1.2, jm.z, jibLen, 0.08, 0.08, { mat: Mat.Girder, tint: ORANGE, yaw: jy });
       const cj = at(-1.1 - 5.8);
       b.plat(cj.x, 0, cj.z, 11.6, 1.6, 0.5, { mat: Mat.Girder, tint: ORANGE, yaw: jy });
-      // the counterweight hangs below the end of the counter-jib
       // the counterweight hangs just beyond the end of the counter-jib, a hang-climb below it
       const cw = at(-14.2);
       b.block(cw.x, -2.2 - 2.4, cw.z, 2.6, 2.4, 2.6, { mat: Mat.Concrete, tint: 0x8a8274, yaw: jy, tag: 'r3_cw' });
@@ -321,8 +320,7 @@ export function region03(entry: Exit): { data: RegionData; exit: Exit } {
   return { data: b.build(), exit: { x: fTop.x, y: fTop.top, z: fTop.z, a: fTop.a } };
 }
 
-/** Lattice crane mast: solid core for collision, corner posts and bracing as detail. */
-/** Lattice crane mast; `yaw` turns it so one face looks along the ladder's normal. */
+/** Lattice crane mast (solid core, decorative posts and bracing); `yaw` turns it so one face looks along the ladder's normal. */
 function mast(b: RegionBuilder, x: number, y0: number, z: number, h: number, yaw = 0): void {
   const c = dcos(yaw);
   const s = dsin(yaw);

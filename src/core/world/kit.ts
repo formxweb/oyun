@@ -148,7 +148,7 @@ export function facade(
 export { v3 };
 export type { V3 };
 
-export type HelixMove = 'start' | 'walk' | 'step' | 'hop' | 'jump' | 'long' | 'climb' | 'ramp' | 'ladder' | 'drop' | 'tall' | 'wallrun' | 'chimney' | 'beam';
+export type HelixMove = 'start' | 'walk' | 'step' | 'hop' | 'jump' | 'long' | 'climb' | 'ramp' | 'ladder' | 'drop' | 'tall' | 'wallrun' | 'chimney' | 'beam' | 'scale' | 'vent';
 
 export interface HelixStep {
   move: HelixMove;
@@ -166,13 +166,17 @@ export interface HelixStep {
   flags?: number;
   /** support style: 'post' timber posts, 'beam' beam to pillar, 'none' */
   support?: 'post' | 'beam' | 'none';
+  /** conveyor belt speed along the direction of travel (m/s; negative runs against you) */
+  conv?: number;
+  /** override the route action recorded for this deck */
+  action?: import('./types').RouteAction;
 }
 
 /**
  * A curved sloped beam following an arc around the Pillar (polar angles in degrees), built from
  * short straight Thin ramps that overlap slightly so the walking surface is continuous.
  */
-export function beamArc(b: RegionBuilder, a0: number, a1: number, r: number, y0: number, y1: number, width: number, o: SolidOpts = {}, segDeg = 4): void {
+export function beamArc(b: RegionBuilder, a0: number, a1: number, r: number, y0: number, y1: number, width: number, o: SolidOpts = {}, segDeg = 4, convSpeed = 0): void {
   const n = Math.max(1, Math.ceil(Math.abs(a1 - a0) / segDeg));
   const ext = 0.12;
   for (let i = 0; i < n; i++) {
@@ -186,7 +190,8 @@ export function beamArc(b: RegionBuilder, a0: number, a1: number, r: number, y0:
     const ya = y0 + (y1 - y0) * t0;
     const yb = y0 + (y1 - y0) * t1;
     const e = ext / l;
-    b.beamBetween(p0.x - dx * e, p0.z - dz * e, ya - (yb - ya) * e, p1.x + dx * e, p1.z + dz * e, yb + (yb - ya) * e, width, o);
+    const so: SolidOpts = convSpeed ? { ...o, flags: (o.flags ?? 0) | SolidFlag.Conveyor, conv: [(dx / l) * convSpeed, (dz / l) * convSpeed] } : o;
+    b.beamBetween(p0.x - dx * e, p0.z - dz * e, ya - (yb - ya) * e, p1.x + dx * e, p1.z + dz * e, yb + (yb - ya) * e, width, so);
   }
 }
 
@@ -214,6 +219,10 @@ const MOVE: Record<HelixMove, { gap: number; dh: number }> = {
   wallrun: { gap: 7.0, dh: 0 },
   chimney: { gap: 0.4, dh: 7.0 },
   beam: { gap: 0.1, dh: 0 },
+  // a wall too tall to catch: run up it (wall climb)
+  scale: { gap: 0.25, dh: 4.6 },
+  // a steam vent on the previous deck throws you up to this one
+  vent: { gap: 1.2, dh: 6.5 },
 };
 
 /**
@@ -237,13 +246,24 @@ const ROUTE_ACTION: Record<HelixMove, import('./types').RouteAction> = {
   wallrun: 'wallrunR',
   chimney: 'walljump',
   beam: 'run',
+  scale: 'climb',
+  vent: 'run',
 };
 
-export function helix(b: RegionBuilder, a0: number, r: number, y0: number, dir: 1 | -1, steps: HelixStep[], o: { mat?: Mat; tint?: number; pillarR?: number; route?: boolean } = {}): HelixDeck[] {
-  const out: HelixDeck[] = [];
-  let a = a0;
-  let top = y0;
-  let prevLen = 0;
+export function helix(
+  b: RegionBuilder,
+  a0: number,
+  r: number,
+  y0: number,
+  dir: 1 | -1,
+  steps: HelixStep[],
+  o: { mat?: Mat; tint?: number; pillarR?: number; route?: boolean; from?: HelixDeck } = {},
+): HelixDeck[] {
+  // `from`: continue from an existing deck (returned as element 0, not rebuilt or re-routed).
+  const out: HelixDeck[] = o.from ? [o.from] : [];
+  let a = o.from ? o.from.a : a0;
+  let top = o.from ? o.from.top : y0;
+  let prevLen = o.from ? o.from.len : 0;
   for (let i = 0; i < steps.length; i++) {
     const s = steps[i];
     const m = MOVE[s.move];
@@ -251,7 +271,7 @@ export function helix(b: RegionBuilder, a0: number, r: number, y0: number, dir: 
     const wid = s.wid ?? 2.6;
     const gap = s.gap ?? m.gap;
     const dh = s.dh ?? m.dh;
-    if (i > 0) {
+    if (i > 0 || o.from) {
       const arc = prevLen / 2 + gap + len / 2;
       a += dir * (arc / r) * (180 / Math.PI);
       top += dh;
@@ -264,7 +284,8 @@ export function helix(b: RegionBuilder, a0: number, r: number, y0: number, dir: 
     const yaw = quantYaw(datan2(-tz, tx));
     const mat = s.mat ?? o.mat ?? Mat.Wood;
     const tint = s.tint ?? o.tint ?? 0xa88a60;
-    b.plat(p.x, top, p.z, len, wid, 0.25, { mat, tint, yaw, tag: s.tag, flags: s.flags });
+    const conv: [number, number] | undefined = s.conv ? [tx * s.conv, tz * s.conv] : undefined;
+    b.plat(p.x, top, p.z, len, wid, 0.25, { mat, tint, yaw, tag: s.tag, flags: (s.flags ?? 0) | (conv ? SolidFlag.Conveyor : 0), conv });
     const prev = out[out.length - 1];
     if (prev && s.move === 'ramp') {
       const sx = prev.x + tx * (prev.len / 2);
@@ -292,15 +313,32 @@ export function helix(b: RegionBuilder, a0: number, r: number, y0: number, dir: 
       void mz;
     }
     if (prev && s.move === 'chimney') {
-      // Two parallel walls rising over the far half of the previous deck: kick between them
-      // (inner/outer) to climb, then mantle forward onto this deck.
-      const pa = prev.a + dir * ((prev.len / 4) / r) * (180 / Math.PI);
+      // A three-sided shaft: two side walls rising from the middle of the previous deck to
+      // this deck, closed at the far end by this deck's own support. Kick from side to side to
+      // climb it, then step forward onto the deck.
+      const half = prev.len / 2 + gap;
+      const pa = prev.a + dir * ((half / 2) / r) * (180 / Math.PI);
       const inner = polar(pa, r - 1.4);
       const outer = polar(pa, r + 1.4);
       const cyaw = quantYaw(datan2(-tz, tx));
-      const h = top - prev.top + 0.6;
-      b.block(inner.x, prev.top, inner.z, prev.len / 2 + 0.3, h, 0.5, { mat: s.mat ?? Mat.Brick, tint: 0x8a5a48, yaw: cyaw });
-      b.block(outer.x, prev.top, outer.z, prev.len / 2 + 0.3, h, 0.5, { mat: s.mat ?? Mat.Brick, tint: 0x8a5a48, yaw: cyaw });
+      const h = top - prev.top + 0.8;
+      b.block(inner.x, prev.top, inner.z, half + 0.1, h, 0.5, { mat: s.mat ?? Mat.Brick, tint: s.tint ?? 0x8a5a48, yaw: cyaw, flags: SolidFlag.NoWallRun | SolidFlag.NoGrab });
+      b.block(outer.x, prev.top, outer.z, half + 0.1, h, 0.5, { mat: s.mat ?? Mat.Brick, tint: s.tint ?? 0x8a5a48, yaw: cyaw, flags: SolidFlag.NoWallRun | SolidFlag.NoGrab });
+      const y0 = prev.top - 0.4;
+      b.block(p.x, y0, p.z, len, top - 0.25 - y0, wid, { mat, tint: 0x6a5a4a, yaw, flags: SolidFlag.NoWallRun });
+    }
+    if (prev && s.move === 'scale') {
+      // a sheer face from the previous deck's level up to this deck: run up it
+      const y0 = prev.top - 0.4;
+      b.block(p.x, y0, p.z, len, top - 0.25 - y0, wid, { mat, tint: s.tint ?? 0x7a6a58, yaw });
+    }
+    if (prev && s.move === 'vent') {
+      // A brass grate at the far end of the previous deck breathing a column of steam.
+      const va = prev.a + dir * (((prev.len / 2) - 0.8) / r) * (180 / Math.PI);
+      const vp = polar(va, r);
+      const launch = Math.sqrt(2 * 25 * (dh + 1.4));
+      b.zone('vent', vp.x - 0.8, prev.top - 0.2, vp.z - 0.8, vp.x + 0.8, prev.top + 1.2, vp.z + 0.8, { strength: launch });
+      b.dbox(vp.x, prev.top, vp.z, 1.5, 0.04, 1.5, { mat: Mat.Brass, tint: 0x9a7a3a, yaw: quantYaw(datan2(-tz, tx)) });
     }
     const sup = s.support ?? 'beam';
     if (sup === 'beam' && o.pillarR) {
@@ -311,7 +349,7 @@ export function helix(b: RegionBuilder, a0: number, r: number, y0: number, dir: 
       b.dbox(p.x, top - 6, p.z, 0.2, 5.8, 0.2, { mat: Mat.Wood, tint: 0x6e5238 });
     }
     out.push({ x: p.x, z: p.z, top, a, yaw, len });
-    if (o.route !== false) b.route(p.x, top, p.z, ROUTE_ACTION[s.move]);
+    if (o.route !== false) b.route(p.x, top, p.z, s.action ?? ROUTE_ACTION[s.move]);
     prevLen = len;
   }
   return out;

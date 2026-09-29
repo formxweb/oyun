@@ -65,12 +65,13 @@ const STRATS: Strategy[] = (() => {
   for (const runup of [0, 3, 6])
     for (const jumpAt of [0.2, 0.9, 1.6, 2.4, 3.2])
       for (const sprint of [true, false]) out.push({ ...base, runup, jumpAt, sprint });
-  for (const wait of [60, 180, 300, 480, 900]) out.push({ ...base, wait }, { ...base, wait, jumpAt: 1.2 });
+  for (let wait = 30; wait <= 990; wait += 60) out.push({ ...base, wait }, { ...base, wait, jumpAt: 1.2 });
   for (const rejump of [14, 24, 36]) for (const aim of [0, 0.35, -0.35]) out.push({ ...base, runup: 4, jumpAt: 1.0, rejump, aim });
   for (const jumpAt of [-1, 1.5, 2.5, 3.5]) out.push({ ...base, runup: 6, jumpAt, slide: true });
   out.push({ ...base, sprint: false, slide: true });
   for (const aim of [0.5, -0.5, 0.25, -0.25]) for (const jumpAt of [0.6, 1.4]) out.push({ ...base, runup: 6, jumpAt, aim });
-  for (const rejump of [16, 22, 30]) out.push({ ...base, jumpAt: 0.2, rejump, alternate: true, hold: 12 });
+  // chimneys: kick between two walls; `aim` picks the first wall (left/right)
+  for (const jumpAt of [0.2, 1.0, 1.8, 2.6]) for (const aim of [1, -1]) for (const sprint of [false, true]) out.push({ ...base, jumpAt, aim, sprint, alternate: true, hold: 6 });
   return out;
 })();
 
@@ -139,7 +140,6 @@ export function playLeg(world: World, sim: Simulation, step: RouteStep, out: Inp
     let jumpTick = -1;
     let slideTick = -1;
     let ok = false;
-    let side = 1;
     let onSurfaceTicks = 0;
     const minY = Math.min(start.y, to.y) - (step.a === 'drop' ? 120 : 6);
     for (let tick = 0; tick < maxTicks; tick++) {
@@ -149,9 +149,11 @@ export function playLeg(world: World, sim: Simulation, step: RouteStep, out: Inp
       const tz = to.z - p.z;
       const dist = Math.hypot(tx, tz);
       let yaw = dist > 0.3 ? datan2(-tx / dist, -tz / dist) : baseYaw;
-      yaw += s.aim * (jumped ? 1 : 0.3);
+      if (!s.alternate) yaw += s.aim * (jumped ? 1 : 0.3);
       let mz = tick < s.wait ? 0 : 1;
       if (dist < 0.5 && p.grounded) mz = 0;
+      // Riding a moving platform: stand still until it brings the destination within reach.
+      if (riding && p.grounded && p.groundId >= 0 && world.solids[p.groundId].mover >= 0 && dist > 4.5 && tick >= s.wait) mz = 0;
       let btn = s.sprint ? Btn.Sprint : 0;
       if (!jumped && s.jumpAt >= 0 && tick >= s.wait && along >= s.jumpAt && (p.grounded || p.mode === Mode.Slide)) {
         jumped = true;
@@ -161,10 +163,16 @@ export function playLeg(world: World, sim: Simulation, step: RouteStep, out: Inp
       if (slideTick >= 0 && !jumped) btn |= Btn.Crouch;
       if (jumped && tick - jumpTick < s.hold) btn |= Btn.Jump;
       if (jumped && s.rejump > 0 && tick > jumpTick + s.hold && (tick - jumpTick) % s.rejump < 4) btn |= Btn.Jump;
-      if (s.alternate && jumped) {
-        if (p.mode === Mode.Air && (tick - jumpTick) % s.rejump === 0) side = -side;
-        yaw = baseYaw + side * 1.5708;
-        if (p.mode === Mode.Hang || p.mode === Mode.Mantle) yaw = baseYaw;
+      if (s.alternate && jumped && p.mode === Mode.Air && p.y < to.y - 0.4) {
+        // Move away from the wall we last kicked off (toward the opposite wall) and keep tapping jump.
+        let nx = -dirz * s.aim;
+        let nz = dirx * s.aim;
+        if (p.hasLastWJ && tick > jumpTick + 2) {
+          nx = p.lastWJNx;
+          nz = p.lastWJNz;
+        }
+        yaw = datan2(-nx, -nz);
+        btn = (btn & ~Btn.Jump) | ((tick - jumpTick) % 6 < 2 ? Btn.Jump : 0);
       }
       if (ladderFoot) {
         const fx = ladderFoot.x - p.x;
@@ -212,6 +220,8 @@ export function playLeg(world: World, sim: Simulation, step: RouteStep, out: Inp
 
 /** Walk precisely onto a route point on the current surface (a player lining up a jump). */
 export function approach(sim: Simulation, at: V3, out: InputFrame[]): void {
+  const g = sim.player.groundId;
+  if (!sim.player.grounded || (g >= 0 && sim.world.solids[g].mover >= 0)) return;
   const snap = sim.snapshot();
   const inputs: InputFrame[] = [];
   for (let t = 0; t < 360; t++) {

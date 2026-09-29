@@ -30,6 +30,13 @@ interface MoverView {
   conds: Conditional[];
 }
 
+interface SpinView {
+  inner: THREE.Object3D;
+  speed: number;
+  axis: 'x' | 'y';
+  outer: THREE.Object3D;
+}
+
 interface CrumbleView {
   solid: Solid;
   mesh: THREE.Mesh;
@@ -52,6 +59,8 @@ export class WorldView {
   private conds: Conditional[] = [];
   private movers: MoverView[] = [];
   private crumbles: CrumbleView[] = [];
+  private spinners: SpinView[] = [];
+  private spinT = 0;
   private readonly mat: THREE.MeshLambertMaterial;
   private readonly fallMat: THREE.MeshLambertMaterial;
   private readonly glyphMat: THREE.ShaderMaterial;
@@ -149,6 +158,21 @@ export class WorldView {
     }
     for (const d of w.decor) {
       if (d.kind === 'bird') continue;
+      if (d.spin && d.mover < 0) {
+        // Turning machinery gets its own small mesh rotating about its axle.
+        const gb = new GeoBuilder();
+        addDecor(gb, new GlyphBuilder(), { ...d, p: { x: 0, y: 0, z: 0 }, yaw: 0 });
+        const inner = new THREE.Mesh(gb.build(), this.mat);
+        inner.castShadow = true;
+        inner.receiveShadow = true;
+        const outer = new THREE.Group();
+        outer.position.set(d.p.x, d.p.y, d.p.z);
+        outer.rotation.y = d.yaw;
+        outer.add(inner);
+        this.group.add(outer);
+        this.spinners.push({ inner, outer, speed: d.spin, axis: d.kind === 'vgear' ? 'x' : 'y' });
+        continue;
+      }
       const fall = d.fallOnly === true;
       let gb: GeoBuilder;
       let gl: GlyphBuilder;
@@ -279,6 +303,14 @@ export class WorldView {
         if (vis && c.fallOnly) vis = (c.tag !== null && st.flags.has(c.tag)) || this.fallFade > 0.01;
         c.obj.visible = vis;
       }
+    }
+    this.spinT += dt;
+    for (const sp of this.spinners) {
+      const d = sp.outer.position.distanceTo(cam);
+      sp.outer.visible = d < o.drawDistance;
+      if (!sp.outer.visible) continue;
+      if (sp.axis === 'x') sp.inner.rotation.x = this.spinT * sp.speed;
+      else sp.inner.rotation.y = this.spinT * sp.speed;
     }
     const tick = Math.floor(tickF);
     for (const cv of this.crumbles) {
@@ -443,6 +475,25 @@ function addDecor(gb: GeoBuilder, gl: GlyphBuilder, d: Decor): void {
       const c = Math.cos(d.yaw);
       const sn = Math.sin(d.yaw);
       gb.box(p.x + c * s.x * 0.5, p.y + s.y - 0.35, p.z - sn * s.x * 0.5, s.x / 2, 0.3, 0.01, d.yaw);
+      break;
+    }
+    case 'vgear': {
+      // a gear standing on edge; its axle runs along local x
+      const r = s.x;
+      const h = s.y;
+      const c = Math.cos(d.yaw);
+      const sn = Math.sin(d.yaw);
+      gb.hcyl(p.x, p.y, p.z, r * 0.88, h / 2, d.yaw, 22);
+      gb.setStyle(0x2e2a26, 3);
+      gb.hcyl(p.x, p.y, p.z, r * 0.18, h * 0.8, d.yaw, 10);
+      gb.setStyle(d.tint, d.mat);
+      const teeth = Math.max(10, Math.round(r * 5));
+      for (let i = 0; i < teeth; i++) {
+        const a = (i / teeth) * Math.PI * 2;
+        const ly = Math.cos(a) * r * 0.95;
+        const lz = Math.sin(a) * r * 0.95;
+        gb.box(p.x + lz * sn, p.y + ly, p.z + lz * c, h / 2, r * 0.065, r * 0.065, d.yaw);
+      }
       break;
     }
     case 'gear': {

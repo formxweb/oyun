@@ -428,7 +428,7 @@ export class RegionBuilder {
 
   // ---------------------------------------------------------------- decor
 
-  decor(kind: DecorKind, x: number, y: number, z: number, sx: number, sy: number, sz: number, o: { mat?: Mat; tint?: number; yaw?: number; q?: V3; key?: string; fallOnly?: boolean; landmark?: boolean } = {}): Decor {
+  decor(kind: DecorKind, x: number, y: number, z: number, sx: number, sy: number, sz: number, o: { mat?: Mat; tint?: number; yaw?: number; q?: V3; key?: string; fallOnly?: boolean; landmark?: boolean; spin?: number } = {}): Decor {
     const d: Decor = {
       kind,
       p: v3(x + this.ox, y + this.oy, z + this.oz),
@@ -444,6 +444,7 @@ export class RegionBuilder {
       key: o.key,
       fallOnly: o.fallOnly,
       landmark: o.landmark,
+      spin: o.spin,
     };
     this.data.decor.push(d);
     return d;

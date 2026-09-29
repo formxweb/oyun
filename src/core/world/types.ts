@@ -283,7 +283,8 @@ export type DecorKind =
   | 'gear'
   | 'bird'
   | 'crate'
-  | 'plant';
+  | 'plant'
+  | 'vgear';
 
 /** Render-only authored detail. */
 export interface Decor {
@@ -305,6 +306,8 @@ export interface Decor {
   fallOnly?: boolean;
   /** far silhouette: rendered at any distance */
   landmark?: boolean;
+  /** render-only rotation speed in rad/s (gears: about their own axle) */
+  spin?: number;
 }
 
 export interface TrialDef {
