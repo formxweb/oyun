@@ -58,7 +58,7 @@ export class UIManager implements ScreenApi {
       if (this.stack.length) this.nav.attach(this.stack[this.stack.length - 1].el!, () => this.back());
       return;
     }
-    if (this.stack.length === 1 && (this.stack[0].name === 'main' || this.stack[0].name === 'results')) return;
+    if (this.stack.length === 1 && (this.stack[0].name === 'main' || this.stack[0].name === 'results' || this.stack[0].name === 'letterUp')) return;
     if (this.stack.length === 1 && this.stack[0].name === 'pause') {
       this.onBackFromRoot?.();
       return;

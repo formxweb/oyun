@@ -2,7 +2,7 @@
  * Spatial focus navigation so every menu works with a controller, keyboard or touch.
  * D-pad / stick / arrows move focus to the nearest element in that direction.
  */
-const SELECTOR = '.btn:not([disabled]), .tab, .toggle, .choice, .card, input[type="range"], [data-nav]';
+const SELECTOR = '.btn:not([disabled]), .tab, .toggle, .choice, .card, input[type="range"], textarea, [data-nav]';
 
 export class FocusNav {
   private root: HTMLElement | null = null;
@@ -43,7 +43,9 @@ export class FocusNav {
     const k = e.code;
     const active = document.activeElement as HTMLElement | null;
     const inRange = active instanceof HTMLInputElement && active.type === 'range';
-    if (k === 'Escape' || k === 'Backspace') {
+    // typing: only Escape leaves the field; every other key belongs to the text
+    const typing = active instanceof HTMLTextAreaElement || (active instanceof HTMLInputElement && active.type === 'text');
+    if (k === 'Escape' || (k === 'Backspace' && !typing)) {
       if (this.back) {
         e.preventDefault();
         e.stopPropagation();
@@ -51,7 +53,7 @@ export class FocusNav {
       }
       return;
     }
-    if (active instanceof HTMLInputElement && active.type === 'text') return;
+    if (typing) return;
     const dirs: Record<string, string> = { ArrowUp: 'up', ArrowDown: 'down', ArrowLeft: 'left', ArrowRight: 'right', KeyW: 'up', KeyS: 'down', KeyA: 'left', KeyD: 'right' };
     if (dirs[k]) {
       if (inRange && (dirs[k] === 'left' || dirs[k] === 'right')) return; // native range handling

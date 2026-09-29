@@ -310,6 +310,7 @@ export const CONTENT_TR: Record<string, string> = {
   'ending.letter': 'Otuz birinci mektup',
   'ending.letter.prompt': 'Tırmanacak olanlara:',
   'ending.letter.default': 'Bütün yolu düştüm. Hiçbir şeyin sonu değildi. Tırmanın.',
+  'ending.letter.send': 'Sonra tırmanacak kişiye bırak',
 
   'ach.first_fall': 'İlk Büyük Düşüş',
   'ach.first_fall.d': '20 metreden fazla düş. Düşerken etrafına bak.',
@@ -320,7 +321,7 @@ export const CONTENT_TR: Record<string, string> = {
   'ach.bell': 'Biri Cevap Verdi',
   'ach.bell.d': 'Son Kat’taki İniş Çanı’nı çal.',
   'ach.m1000': '1000 Metre',
-  'ach.m1000.d': '1.000 metre yüksekliğe ulaş.',
+  'ach.m1000.d': 'Toplamda bir kilometre tırman.',
   'ach.m5000': '5000 Metre',
   'ach.m5000.d': 'Yolculukların boyunca toplam 5.000 metre tırman.',
   'ach.long_fall': 'Aşağıya Uzun Yol',

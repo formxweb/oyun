@@ -1,4 +1,7 @@
+import { readFileSync } from 'node:fs';
 import { describe, expect, it } from 'vitest';
+import { ACHIEVEMENTS } from '../src/core/catalog/achievements';
+import { allMemoryFlags } from '../src/core/world/memory';
 import { EN } from '../src/client/i18n/en';
 import { TR } from '../src/client/i18n/tr';
 import { dailyRoute } from '../src/core/daily';
@@ -124,5 +127,31 @@ describe('Daily Summit', () => {
       }
       expect(d.flags.every((f) => !f.startsWith(`r${d.region + 1}_`))).toBe(true);
     }
+  });
+});
+
+describe('achievements', () => {
+  const src = ['src/client/services/profile.ts', 'src/client/app.ts'].map((f) => readFileSync(f, 'utf8')).join('\n');
+  const count = (kind: string) => world.collectibles.filter((c) => c.kind === kind && c.id !== 'f0').length;
+
+  it('every achievement can be earned: something unlocks it', () => {
+    const missing = ACHIEVEMENTS.map((a) => a.id).filter((id) => !src.includes(`unlock('${id}')`));
+    expect(missing).toEqual([]);
+  });
+
+  it('memory flags that unlock achievements exist in the world', () => {
+    const flags = new Set(allMemoryFlags(world));
+    const used = [...src.matchAll(/flag === '([a-z0-9_]+)'\) this\.unlock/g)].map((m) => m[1]);
+    expect(used.length).toBeGreaterThan(3);
+    expect(used.filter((f) => !flags.has(f))).toEqual([]);
+  });
+
+  it('collection targets match the world', () => {
+    const target = (id: string) => ACHIEVEMENTS.find((a) => a.id === id)!.target;
+    expect(target('complete_journey')).toBe(count('fragment'));
+    expect(target('archivist')).toBe(count('record'));
+    expect(target('echo_hunter')).toBe(count('echo'));
+    expect(target('all_lessons')).toBe(count('lesson'));
+    expect(target('gold_standard')).toBe(world.trials.length);
   });
 });

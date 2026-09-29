@@ -350,6 +350,7 @@ export const CONTENT_EN: Record<string, string> = {
   'ending.letter': 'The thirty-first letter',
   'ending.letter.prompt': 'To the ones who will climb:',
   'ending.letter.default': 'I fell the whole way. It was not the end of anything. Climb.',
+  'ending.letter.send': 'Leave it for whoever climbs next',
 
   // ------------------------------------------------------------------ achievements
   'ach.first_fall': 'First Major Fall',
@@ -361,7 +362,7 @@ export const CONTENT_EN: Record<string, string> = {
   'ach.bell': 'Someone Answered',
   'ach.bell.d': 'Ring the Descent Bell on the Last Floor.',
   'ach.m1000': '1000 Meters',
-  'ach.m1000.d': 'Reach an altitude of 1,000 metres.',
+  'ach.m1000.d': 'Climb a kilometre, all told.',
   'ach.m5000': '5000 Meters',
   'ach.m5000.d': 'Climb a total of 5,000 metres across your journeys.',
   'ach.long_fall': 'The Long Way Down',

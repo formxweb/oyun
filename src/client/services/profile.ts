@@ -17,6 +17,13 @@ import { allMemoryFlags } from '../../core/world/memory';
 export { allMemoryFlags };
 
 /**
+ * The grandparent's letter (f0) is not one of the thirty Letters Down: it is found at the
+ * Cradle, read in the ending, and kept apart in the Collection.
+ */
+export const GRANDPARENT_LETTER = 'f0';
+const counts = (id: string, kind: CollectibleKind) => !(kind === 'fragment' && id === GRANDPARENT_LETTER);
+
+/**
  * Progression: the journey in progress, lifetime collection, achievements and cosmetics.
  * All rules are local and deterministic; competitive data is verified by the server separately.
  */
@@ -28,7 +35,7 @@ export class Profile {
     private readonly world: World,
     private readonly hooks: ProfileHooks = {},
   ) {
-    for (const c of world.collectibles) this.totals[c.kind]++;
+    for (const c of world.collectibles) if (counts(c.id, c.kind)) this.totals[c.kind]++;
   }
 
   // ---------------------------------------------------------------- journey
@@ -142,13 +149,13 @@ export class Profile {
     }
     if (sim.risk.chain >= 25) this.unlock('flow');
     if (sim.risk.mult >= MAX_MULT - 1e-6) this.unlock('all_in');
-    if (sim.player.grounded && sim.player.y >= 1000) this.unlock('m1000');
   }
 
   private onFlag(flag: string): void {
     if (flag === 'r1_bell') this.unlock('bell');
     if (flag === 'r4_winch') this.unlock('winch');
-    if (flag === 'r5_rode_ring') this.unlock('ring');
+    // the Ring Line's drive lever is in the cab: pulling it is riding it
+    if (flag === 'r5_ring') this.unlock('ring');
     if (flag === 'r9_tower_top') this.unlock('beyond_gravity');
     if (flag === 'r10_cradle') this.unlock('first_summit');
     if (flag.startsWith('master_')) this.unlock('master_route');
@@ -161,14 +168,27 @@ export class Profile {
     L.climbed += climbedDelta;
     if (maxY > L.maxY) L.maxY = maxY;
     if (this.data.journey) this.data.journey.playTime += seconds;
+    this.data.achievementProgress.m1000 = Math.min(1000, Math.floor(L.climbed));
     this.data.achievementProgress.m5000 = Math.min(5000, Math.floor(L.climbed));
+    if (L.climbed >= 1000) this.unlock('m1000');
     if (L.climbed >= 5000) this.unlock('m5000');
   }
 
   countCollected(kind: CollectibleKind): number {
     let n = 0;
-    for (const id of this.data.everCollected) if (this.world.collectibleById.get(id)?.kind === kind) n++;
+    for (const id of this.data.everCollected) if (this.world.collectibleById.get(id)?.kind === kind && counts(id, kind)) n++;
     return n;
+  }
+
+  /** Letters read in the ending are found, wherever the climber stood. */
+  markFound(ids: string[]): void {
+    const j = this.data.journey;
+    for (const id of ids) {
+      if (!this.world.collectibleById.has(id)) continue;
+      if (!this.data.everCollected.includes(id)) this.data.everCollected.push(id);
+      if (j && !j.collected.includes(id)) j.collected.push(id);
+    }
+    this.checkCollections();
   }
 
   private checkCollections(): void {

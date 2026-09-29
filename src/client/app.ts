@@ -27,7 +27,7 @@ import { CameraRig, type CameraSettings } from './render/camera';
 import { DEFAULT_LOOK, type Look } from './render/character';
 import { RenderSystem } from './render/renderer';
 import { Online } from './services/online';
-import { allMemoryFlags, Profile } from './services/profile';
+import { GRANDPARENT_LETTER, allMemoryFlags, Profile } from './services/profile';
 import { migrate, SaveManager, validate, type SaveData } from './services/save';
 import { isTouchDevice, SettingsStore } from './services/settings';
 import { Session } from './session';
@@ -1091,7 +1091,8 @@ export class App implements UIContext {
     }
     this.saveNow(true);
     const flags = [...this.session.sim.st.flags];
-    // Read the first letter and Aurel's letter, then fall.
+    // Read the first letter and Aurel's letter, then fall. Both count as found.
+    this.profile.markFound(['f1', GRANDPARENT_LETTER]);
     this.pause(false);
     this.ui.replace('reader', 'f1');
     const origPop = this.ui.pop.bind(this.ui);
@@ -1124,12 +1125,20 @@ export class App implements UIContext {
       this.ui.replace('main');
       this.ui.push('credits');
     };
-    if (letters >= this.profile.totals.fragment && !this.profile.data.thirtyFirstLetter) {
-      const text = prompt(`${t('ending.secret')}\n\n${t('ending.letter.prompt')}`, t('ending.letter.default'));
-      this.profile.data.thirtyFirstLetter = (text ?? t('ending.letter.default')).slice(0, 600);
-    }
     this.saveNow(true);
-    setTimeout(afterLetter, 6000);
+    // With every Letter Down found, the grandparent's request: write the thirty-first letter.
+    const writeLetter = letters >= this.profile.totals.fragment && !this.profile.data.thirtyFirstLetter;
+    setTimeout(() => {
+      if (!writeLetter) {
+        afterLetter();
+        return;
+      }
+      this.ui.replace('letterUp', (text: string) => {
+        this.profile.data.thirtyFirstLetter = text.slice(0, 600);
+        this.saveNow(true);
+        afterLetter();
+      });
+    }, 6000);
   }
 
   // ------------------------------------------------------------------ pause / menu

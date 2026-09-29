@@ -467,6 +467,36 @@ input[type='range'] {
 }
 
 /* letter reader */
+.letter .muted {
+  color: rgba(42, 34, 24, 0.62);
+}
+.letter .btn {
+  color: #2a2218;
+}
+.letter .btn.box {
+  border-color: rgba(42, 34, 24, 0.45);
+}
+.letter .btn.box:hover,
+.letter .btn.box:focus-visible,
+.letter .btn.box.focus {
+  background: rgba(42, 34, 24, 0.1);
+  border-color: var(--accent);
+}
+.letter-input {
+  width: 100%;
+  box-sizing: border-box;
+  font: inherit;
+  color: inherit;
+  background: rgba(255, 255, 255, 0.35);
+  border: 1px solid rgba(42, 34, 24, 0.35);
+  border-radius: 2px;
+  padding: 0.8rem 1rem;
+  resize: vertical;
+  outline: none;
+}
+.letter-input:focus {
+  border-color: var(--accent);
+}
 .letter {
   max-width: 38rem;
   margin: auto;

@@ -6,11 +6,13 @@ import type { CollectibleKind } from '../../core/world/types';
 import { ACTIONS, type Action } from '../input/input';
 import { fmtDuration, fmtNumber, fmtTime, getLang, LANGS, setLang, t } from '../i18n/i18n';
 import type { QualityLevel } from '../render/renderer';
+import { GRANDPARENT_LETTER } from '../services/profile';
 import type { UIContext, GhostChoice, TrialResultView } from './context';
 import { add, clear, h, paragraphs } from './dom';
 
 export type ScreenName =
   | 'main'
+  | 'letterUp'
   | 'new'
   | 'ngplus'
   | 'settings'
@@ -502,7 +504,8 @@ const collection: Build = (ctx, ui) => {
   const w = ctx.world;
   const body = h('div', { class: 'scroll', style: { flex: '1' } });
   const kindTab = (kind: CollectibleKind) => {
-    const items = w.collectibles.filter((c) => c.kind === kind);
+    // the grandparent's letter is kept apart from the thirty Letters Down (below)
+    const items = w.collectibles.filter((c) => c.kind === kind && c.id !== GRANDPARENT_LETTER);
     if (kind === 'fragment') items.sort((a, b) => Number(b.id.slice(1)) - Number(a.id.slice(1)));
     else items.sort((a, b) => a.region - b.region);
     const grid = h('div', { class: 'grid', style: { gridTemplateColumns: 'repeat(auto-fill, minmax(15rem, 1fr))' } });
@@ -533,8 +536,12 @@ const collection: Build = (ctx, ui) => {
       add(body, kindTab('fragment'));
       if (p.data.journeysCompleted > 0) {
         const aurel = h('button', { class: 'card', type: 'button', style: { marginTop: '0.8rem' } }, h('div', { class: 'title' }, t('f0.title')));
-        aurel.addEventListener('click', () => ui.push('reader', 'f0'));
+        aurel.addEventListener('click', () => ui.push('reader', GRANDPARENT_LETTER));
         add(body, aurel);
+      }
+      if (p.data.thirtyFirstLetter) {
+        const mine = h('div', { class: 'letter', style: { marginTop: '0.8rem' } }, h('h3', null, t('ending.letter')), ...paragraphs(p.data.thirtyFirstLetter));
+        add(body, mine);
       }
       break;
     case 'records':
@@ -614,6 +621,38 @@ const reader: Build = (ctx, ui, arg) => {
   }
   el.append(h('div', { style: { marginTop: '1.4rem', textAlign: 'right' } }, btn(t('common.close'), () => ui.pop(), { cls: 'small box', primary: true })));
   return h('div', { class: 'screen full' }, el);
+};
+
+/**
+ * The thirty-first letter: with every Letter Down found, the climber writes the first Letter Up.
+ * `arg` receives the text. The default text is there for anyone who cannot or would rather not
+ * type (a controller, a phone held sideways): leaving it is a real answer too.
+ */
+const letterUp: Build = (ctx, ui, arg) => {
+  const done = arg as (text: string) => void;
+  const area = h('textarea', { class: 'letter-input', maxlength: 600, rows: 6, 'aria-label': t('ending.letter.prompt') });
+  area.value = t('ending.letter.default');
+  let sent = false;
+  const send = () => {
+    if (sent) return;
+    sent = true;
+    done(area.value.trim() || t('ending.letter.default'));
+  };
+  void ctx;
+  void ui;
+  return h(
+    'div',
+    { class: 'screen full' },
+    h(
+      'div',
+      { class: 'letter' },
+      h('h3', null, t('ending.letter')),
+      h('p', { class: 'muted' }, t('ending.secret')),
+      h('p', null, t('ending.letter.prompt')),
+      area,
+      h('div', { style: { marginTop: '1.2rem', textAlign: 'right' } }, btn(t('ending.letter.send'), send, { cls: 'small box', primary: true })),
+    ),
+  );
 };
 
 // ------------------------------------------------------------------ customize
@@ -1071,6 +1110,7 @@ export const SCREENS: Record<ScreenName, Build> = {
   pause,
   results,
   reader,
+  letterUp,
   credits,
 };
 

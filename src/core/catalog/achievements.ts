@@ -23,7 +23,7 @@ export const ACHIEVEMENTS: AchievementDef[] = [
   def('caught'),
   def('first_letter'),
   def('bell'),
-  def('m1000'),
+  def('m1000', false, 1000),
   def('m5000', false, 5000),
   def('long_fall'),
   def('no_way_down'),
