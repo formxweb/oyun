@@ -2,6 +2,7 @@ import { region01 } from './regions/r01_ground';
 import { region02 } from './regions/r02_blocks';
 import { region03 } from './regions/r03_construction';
 import { region04 } from './regions/r04_machine';
+import { region05 } from './regions/r05_city';
 import type { RegionData } from './types';
 import { World } from './world';
 
@@ -14,7 +15,8 @@ export function buildRegions(): RegionData[] {
   const r2 = region02(r1.gate);
   const r3 = region03(r2.exit);
   const r4 = region04(r3.exit);
-  return [r1.data, r2.data, r3.data, r4.data];
+  const r5 = region05(r4.exit);
+  return [r1.data, r2.data, r3.data, r4.data, r5.data];
 }
 
 export function buildWorld(): World {

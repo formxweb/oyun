@@ -102,6 +102,10 @@ export function flight(b: RegionBuilder, x: number, y0: number, z: number, width
 
 /** Horizontal position on a circle around the Pillar. */
 export function polar(angleDeg: number, r: number): { x: number; z: number } {
+  return polarAt(angleDeg, r);
+}
+
+function polarAt(angleDeg: number, r: number): { x: number; z: number } {
   const a = (angleDeg * Math.PI) / 180;
   return { x: dsin(a) * r, z: dcos(a) * r };
 }
@@ -140,6 +144,44 @@ export function facade(
         if (side === 's') b.dbox(x + u, wy, z + d / 2 + 0.03, 1.0, 1.4, 0.06, { mat, tint });
         if (side === 'e') b.dbox(x + w / 2 + 0.03, wy, z + u, 0.06, 1.4, 1.0, { mat, tint });
         if (side === 'w') b.dbox(x - w / 2 - 0.03, wy, z + u, 0.06, 1.4, 1.0, { mat, tint });
+      }
+    }
+  }
+}
+
+/** A building block rotated by yaw, with window rows on its four faces. */
+export function facadeRot(b: RegionBuilder, x: number, y0: number, z: number, w: number, h: number, d: number, yaw: number, tint: number, mat: Mat, lit: number): void {
+  b.block(x, y0, z, w, h, d, { mat, tint, yaw, flags: SolidFlag.None });
+  const c = dcos(yaw);
+  const s = dsin(yaw);
+  const rows = Math.floor((h - 1) / 3);
+  for (const face of [0, 1, 2, 3]) {
+    const along = face < 2 ? w : d;
+    const n = Math.max(1, Math.floor(along / 3));
+    for (let iy = 0; iy < rows; iy++) {
+      for (let ix = 0; ix < n; ix++) {
+        const u = -along / 2 + (ix + 0.5) * (along / n);
+        let lx = 0;
+        let lz = 0;
+        if (face === 0) {
+          lx = u;
+          lz = d / 2 + 0.04;
+        } else if (face === 1) {
+          lx = u;
+          lz = -d / 2 - 0.04;
+        } else if (face === 2) {
+          lx = w / 2 + 0.04;
+          lz = u;
+        } else {
+          lx = -w / 2 - 0.04;
+          lz = u;
+        }
+        const wx = x + lx * c + lz * s;
+        const wz = z - lx * s + lz * c;
+        const isLit = ((ix * 7 + iy * 13 + face * 5 + Math.floor(x)) % 17) / 17 < lit;
+        const sx = face < 2 ? 1.1 : 0.08;
+        const sz = face < 2 ? 0.08 : 1.1;
+        b.dbox(wx, y0 + 1.2 + iy * 3, wz, sx, 1.5, sz, { mat: isLit ? Mat.Glow : Mat.Glass, tint: isLit ? 0xffd89a : 0x3a444e, yaw });
       }
     }
   }
@@ -192,6 +234,19 @@ export function beamArc(b: RegionBuilder, a0: number, a1: number, r: number, y0:
     const e = ext / l;
     const so: SolidOpts = convSpeed ? { ...o, flags: (o.flags ?? 0) | SolidFlag.Conveyor, conv: [(dx / l) * convSpeed, (dz / l) * convSpeed] } : o;
     b.beamBetween(p0.x - dx * e, p0.z - dz * e, ya - (yb - ya) * e, p1.x + dx * e, p1.z + dz * e, yb + (yb - ya) * e, width, so);
+  }
+}
+
+/** A flat annular sector floor (plazas, station platforms, rings), built from tangent boxes. */
+export function sector(b: RegionBuilder, a0: number, a1: number, r0: number, r1: number, top: number, thick: number, o: SolidOpts = {}, segDeg = 4): void {
+  const span = Math.abs(a1 - a0);
+  const n = Math.max(1, Math.ceil(span / segDeg));
+  const step = (a1 - a0) / n;
+  const chord = 2 * r1 * Math.sin(((Math.abs(step) / 2) * Math.PI) / 180) + 0.15;
+  for (let i = 0; i < n; i++) {
+    const mid = a0 + step * (i + 0.5);
+    const p = polarAt(mid, (r0 + r1) / 2);
+    b.plat(p.x, top, p.z, chord, r1 - r0, thick, { ...o, yaw: quantYaw((mid * Math.PI) / 180) });
   }
 }
 
@@ -257,9 +312,16 @@ export function helix(
   y0: number,
   dir: 1 | -1,
   steps: HelixStep[],
-  o: { mat?: Mat; tint?: number; pillarR?: number; route?: boolean; from?: HelixDeck } = {},
+  o: { mat?: Mat; tint?: number; pillarR?: number; route?: boolean; from?: HelixDeck; center?: { x: number; z: number } } = {},
 ): HelixDeck[] {
   // `from`: continue from an existing deck (returned as element 0, not rebuilt or re-routed).
+  // `center`: spiral around another axis than the Pillar's (a tower, a spire).
+  const cx = o.center?.x ?? 0;
+  const cz = o.center?.z ?? 0;
+  const polar = (ang: number, rr: number) => {
+    const q = polarAt(ang, rr);
+    return { x: q.x + cx, z: q.z + cz };
+  };
   const out: HelixDeck[] = o.from ? [o.from] : [];
   let a = o.from ? o.from.a : a0;
   let top = o.from ? o.from.top : y0;

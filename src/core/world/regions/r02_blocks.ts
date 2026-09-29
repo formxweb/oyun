@@ -1,6 +1,6 @@
 import { datan2, dcos, dsin, v3 } from '../../math';
 import { RegionBuilder, quantYaw } from '../builder';
-import { hangCable, helix, lamp, numeral, pillar, polar, type HelixStep } from '../kit';
+import { facadeRot, hangCable, helix, lamp, numeral, pillar, polar, type HelixStep } from '../kit';
 import { Ability, Mat, SolidFlag, type RegionData } from '../types';
 
 /**
@@ -387,44 +387,6 @@ export function region02(gate: { x: number; y: number; z: number }): { data: Reg
   pillar(b, 100, topY + 40, PR, PR, 2);
   b.data.meta.topY = topY;
   return { data: b.build(), exit: { x: crown.x, y: crown.top, z: crown.z, a: crown.a } };
-}
-
-/** A building block rotated by yaw, with window rows on its four faces. */
-function facadeRot(b: RegionBuilder, x: number, y0: number, z: number, w: number, h: number, d: number, yaw: number, tint: number, mat: Mat, lit: number): void {
-  b.block(x, y0, z, w, h, d, { mat, tint, yaw, flags: SolidFlag.None });
-  const c = dcos(yaw);
-  const s = dsin(yaw);
-  const rows = Math.floor((h - 1) / 3);
-  for (const face of [0, 1, 2, 3]) {
-    const along = face < 2 ? w : d;
-    const n = Math.max(1, Math.floor(along / 3));
-    for (let iy = 0; iy < rows; iy++) {
-      for (let ix = 0; ix < n; ix++) {
-        const u = -along / 2 + (ix + 0.5) * (along / n);
-        let lx = 0;
-        let lz = 0;
-        if (face === 0) {
-          lx = u;
-          lz = d / 2 + 0.04;
-        } else if (face === 1) {
-          lx = u;
-          lz = -d / 2 - 0.04;
-        } else if (face === 2) {
-          lx = w / 2 + 0.04;
-          lz = u;
-        } else {
-          lx = -w / 2 - 0.04;
-          lz = u;
-        }
-        const wx = x + lx * c + lz * s;
-        const wz = z - lx * s + lz * c;
-        const isLit = ((ix * 7 + iy * 13 + face * 5 + Math.floor(x)) % 17) / 17 < lit;
-        const sx = face < 2 ? 1.1 : 0.08;
-        const sz = face < 2 ? 0.08 : 1.1;
-        b.dbox(wx, y0 + 1.2 + iy * 3, wz, sx, 1.5, sz, { mat: isLit ? Mat.Glow : Mat.Glass, tint: isLit ? 0xffd89a : 0x3a444e, yaw });
-      }
-    }
-  }
 }
 
 /** Low railings on the outer edge of balcony decks (vaultable, never walls). */

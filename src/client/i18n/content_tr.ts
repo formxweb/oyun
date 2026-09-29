@@ -257,7 +257,7 @@ export const CONTENT_TR: Record<string, string> = {
   'rec.r4.counterweights.title': 'Karşı Ağırlıklar',
   'rec.r4.counterweights.body': 'Ev büyüklüğünde taş bloklar; zincirlere asıldılar ve şehir indirildikçe onlar da indirildi. Bazıları hâlâ Kayışlar’da asılı, hiç gelmeyecek bir yükü bekliyor.',
   'rec.r5.ringline.title': 'Halka Hattı',
-  'rec.r5.ringline.body': 'Sütunun etrafında dört dakikada bir tur atan havai bir demiryolu. Yürüyerek gidilemeyecek hiçbir yeri birbirine bağlamaz. Meclis kayıtlarına göre "burada bir şey aşağı değil etrafında dönsün diye" yapılmış.',
+  'rec.r5.ringline.body': 'Sütunun etrafında her bir buçuk dakikada bir tur atan havai bir demiryolu. Yürüyerek gidilemeyecek hiçbir yeri birbirine bağlamaz. Meclis kayıtlarına göre "burada bir şey aşağı değil etrafında dönsün diye" yapılmış.',
   'rec.r5.clock.title': 'Saat Kulesi',
   'rec.r5.clock.body': 'Otuz çentikli ve tek ibreli bir saat kadranı. İbre, bir kuşak Şehir’den alt katlara her ayrıldığında bir çentik aşağı indirildi. On yediyi gösteriyor.',
   'rec.r6.bridge.title': 'Uzun Köprü',

@@ -125,7 +125,7 @@ export function region03(entry: Exit): { data: RegionData; exit: Exit } {
   const toPath = { x: bTop.x - cA.x, z: bTop.z - cA.z };
   const tpl = Math.hypot(toPath.x, toPath.z);
   const nA = v3(toPath.x / tpl, 0, toPath.z / tpl);
-  mast(b, cA.x, mastBase, cA.z, mastH, faceYaw(nA));
+  mast(b, cA.x, mastBase, cA.z, mastH - 0.5, faceYaw(nA));
   b.ladder(cA.x + nA.x * 1.26, mastBase, cA.z + nA.z * 1.26, mastTop, nA);
   b.route(cA.x + nA.x * 2.2, mastBase, cA.z + nA.z * 2.2, 'run');
   b.route(cA.x, mastTop, cA.z, 'ladder');
@@ -144,8 +144,8 @@ export function region03(entry: Exit): { data: RegionData; exit: Exit } {
   const cBBase = bTop.top + 10;
   const mastBH = mastTop - cBBase + 0.4;
   b.cyl(cB.x, bTop.top - 3, cB.z, 3.2, 13, { mat: Mat.Concrete, tint: 0xa8a090 });
-  mast(b, cB.x, cBBase, cB.z, mastBH);
-  b.plat(cB.x, mastTop + 0.4, cB.z, 4.2, 4.2, 0.5, { mat: Mat.Metal, tint: 0x5a6068 });
+  mast(b, cB.x, cBBase, cB.z, mastBH - 0.3);
+  b.plat(cB.x, mastTop + 0.4, cB.z, 4.2, 4.2, 0.3, { mat: Mat.Metal, tint: 0x5a6068 });
   // Crane A's slewing top: cab, jib, counter-jib and counterweight turn together.
   b.mover(
     { kind: 'transition', origin: v3(cA.x, mastTop, cA.z), flag: 'r3_crane', fromYaw: 0, toYaw: swing, dur: 5.5 },
@@ -158,9 +158,9 @@ export function region03(entry: Exit): { data: RegionData; exit: Exit } {
       b.plat(0, 0.0, 0, 2.2, 2.2, 0.5, { mat: Mat.Metal, tint: 0x5a6068, yaw: jy });
       // operator's cab hangs off the side away from the ladder
       const side = s * nA.x + c * nA.z > 0 ? -2.3 : 2.3;
-      b.block(s * side, -0.6, c * side, 2.2, 2.4, 2.4, { mat: Mat.Glass, tint: 0xd8742a, yaw: jy, flags: SolidFlag.NoWallRun });
-      const jm = at(1.4 + jibLen / 2);
-      b.plat(jm.x, 0, jm.z, jibLen + 0.6, 1.1, 0.5, { mat: Mat.Girder, tint: ORANGE, yaw: jy });
+      b.block(s * side, -0.45, c * side, 2.2, 2.3, 2.4, { mat: Mat.Glass, tint: 0xd8742a, yaw: jy, flags: SolidFlag.NoWallRun });
+      const jm = at(1.15 + jibLen / 2);
+      b.plat(jm.x, 0, jm.z, jibLen + 0.1, 1.1, 0.5, { mat: Mat.Girder, tint: ORANGE, yaw: jy });
       b.decor('box', jm.x, 1.2, jm.z, jibLen, 0.08, 0.08, { mat: Mat.Girder, tint: ORANGE, yaw: jy });
       const cj = at(-1.1 - 5.8);
       b.plat(cj.x, 0, cj.z, 11.6, 1.6, 0.5, { mat: Mat.Girder, tint: ORANGE, yaw: jy });
@@ -256,8 +256,8 @@ export function region03(entry: Exit): { data: RegionData; exit: Exit } {
   b.mover(
     { kind: 'path', origin: v3(hp.x, dTop.top, hp.z), points: [v3(0, 0, 0), v3(0, hookRise, 0)], segTime: [14], pause: 3, activeFlag: 'r3_hook' },
     () => {
-      b.plat(0, 0, 0, 3.2, 3.2, 0.4, { mat: Mat.Metal, tint: 0x5a6068 });
-      b.decor('box', 0, 0.3, 0, 0.6, 1.8, 0.4, { mat: Mat.Brass, tint: 0xd8b04a });
+      b.plat(0, 0, 0, 3.2, 3.2, 0.4, { mat: Mat.Metal, tint: 0x5a6068, yaw: quantYaw(rad(hA)) });
+      b.decor('box', 0, 0.3, 0, 0.6, 1.8, 0.4, { mat: Mat.Brass, tint: 0xd8b04a, yaw: quantYaw(rad(hA)) });
     },
   );
   b.cable(v3(hp.x, dTop.top + hookRise + 30, hp.z), v3(hp.x, dTop.top + 2, hp.z), 0, Mat.Metal, 0x2a2a2a);

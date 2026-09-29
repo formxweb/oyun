@@ -5,6 +5,7 @@
  */
 import { solidsAt, verifyRoute } from '../src/core/bot';
 import { buildWorld } from '../src/core/world/index';
+import { newWorldState } from '../src/core/world/world';
 import { BASE_ABILITIES, Shape, SolidFlag } from '../src/core/world/types';
 
 const world = buildWorld();
@@ -33,6 +34,89 @@ for (const r of world.ropes) {
 for (const a of world.anchors) {
   if (only >= 0 && a.region !== only) continue;
   if (solidsAt(world, a.pos, 0.3, 0.2).length === 0) lint(`region ${a.region}: anchor ${a.id} is not standing on anything`);
+}
+
+// Moving machinery must never pass through static architecture: sweep every mover through
+// 90 seconds of motion (all memory flags on) and test its solids against static solids.
+{
+  const st = newWorldState([]);
+  for (const m of world.movers) {
+    for (const f of [m.flag, m.activeFlag]) {
+      if (!f) continue;
+      st.flags.add(f);
+      st.flagTick.set(f, 0);
+    }
+  }
+  const reported = new Set<string>();
+  for (let tick = 0; tick <= 120 * 90; tick += 20) {
+    world.applyMovers(tick, st);
+    for (const m of world.movers) {
+      if (only >= 0 && m.region !== only) continue;
+      for (const sid of m.solids) {
+        const so = world.solids[sid];
+        world.querySolids(so.minX, so.minY, so.minZ, so.maxX, so.maxY, so.maxZ, ids);
+        for (const i of ids) {
+          const o = world.solids[i];
+          if (o.mover >= 0 || o.flags & SolidFlag.FallOnly) continue;
+          if (Math.min(so.maxY, o.maxY) - Math.max(so.minY, o.minY) < 0.08) continue;
+          if (!overlap2D(so, o, 0.08)) continue;
+          const key = `${m.id}:${i}`;
+          if (reported.has(key)) continue;
+          reported.add(key);
+          lint(`region ${m.region}: mover ${m.id} (${m.kind}) passes through static solid ${i} at (${o.x.toFixed(1)},${o.maxY.toFixed(1)},${o.z.toFixed(1)}) around t=${(tick / 120).toFixed(1)}s`);
+        }
+      }
+    }
+  }
+  world.applyMovers(0, newWorldState());
+}
+
+type SolidT = (typeof world.solids)[number];
+function overlap2D(a: SolidT, b: SolidT, margin: number): boolean {
+  if (a.shape === Shape.Cyl && b.shape === Shape.Cyl) return Math.hypot(a.x - b.x, a.z - b.z) < a.hx + b.hx - margin;
+  if (a.shape === Shape.Cyl) return solidsOverlapCircle(b, a.x, a.z, a.hx - margin);
+  if (b.shape === Shape.Cyl) return solidsOverlapCircle(a, b.x, b.z, b.hx - margin);
+  // separating axis test for two oriented rectangles
+  const axes = [
+    [a.c, -a.s],
+    [a.s, a.c],
+    [b.c, -b.s],
+    [b.s, b.c],
+  ];
+  const corners = (q: SolidT): [number, number][] => {
+    const out: [number, number][] = [];
+    for (const [sx, sz] of [
+      [-1, -1],
+      [1, -1],
+      [1, 1],
+      [-1, 1],
+    ]) {
+      const lx = sx * q.hx;
+      const lz = sz * q.hz;
+      out.push([q.x + lx * q.c + lz * q.s, q.z - lx * q.s + lz * q.c]);
+    }
+    return out;
+  };
+  const ca = corners(a);
+  const cb = corners(b);
+  for (const [ax, az] of axes) {
+    let amin = Infinity;
+    let amax = -Infinity;
+    let bmin = Infinity;
+    let bmax = -Infinity;
+    for (const [x, z] of ca) {
+      const d = x * ax + z * az;
+      amin = Math.min(amin, d);
+      amax = Math.max(amax, d);
+    }
+    for (const [x, z] of cb) {
+      const d = x * ax + z * az;
+      bmin = Math.min(bmin, d);
+      bmax = Math.max(bmax, d);
+    }
+    if (Math.min(amax, bmax) - Math.max(amin, bmin) < margin) return false;
+  }
+  return true;
 }
 
 function solidsOverlapCircle(so: (typeof world.solids)[number], x: number, z: number, r: number): boolean {

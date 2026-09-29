@@ -295,7 +295,7 @@ export const CONTENT_EN: Record<string, string> = {
   'rec.r4.counterweights.title': 'Counterweights',
   'rec.r4.counterweights.body': 'Stone blocks the size of houses, hung on chains and let down as the city was let down. Some of them still hang in the Belts, waiting for a load that will never come.',
   'rec.r5.ringline.title': 'The Ring Line',
-  'rec.r5.ringline.body': 'An elevated railway circling the Pillar once every four minutes. It connects nothing that could not be walked to. It was built, the Council records say, "so that something here would go round instead of down".',
+  'rec.r5.ringline.body': 'An elevated railway circling the Pillar once every minute and a half. It connects nothing that could not be walked to. It was built, the Council records say, "so that something here would go round instead of down".',
   'rec.r5.clock.title': 'The Clock Spire',
   'rec.r5.clock.body': 'A clock face with thirty marks and one hand. The hand was moved down by one mark each time a generation left the City for the floors below. It points at seventeen.',
   'rec.r6.bridge.title': 'The Long Bridge',
