@@ -1,6 +1,7 @@
 import { describe, expect, it } from 'vitest';
 import { EN } from '../src/client/i18n/en';
 import { TR } from '../src/client/i18n/tr';
+import { dailyRoute } from '../src/core/daily';
 import { buildWorld } from '../src/core/world/index';
 
 /**
@@ -87,5 +88,41 @@ describe('world content', () => {
 
   it('the Cradle ends the journey', () => {
     expect(world.triggers.some((t) => t.flag === 'r10_cradle')).toBe(true);
+  });
+});
+
+describe('Daily Summit', () => {
+  const along = (region: number, p: { x: number; y: number; z: number }) => {
+    let best = 0;
+    let bd = Infinity;
+    world.regionData[region].route.forEach((s, k) => {
+      const d = Math.hypot(s.p.x - p.x, s.p.y - p.y, s.p.z - p.z);
+      if (d < bd) {
+        bd = d;
+        best = k;
+      }
+    });
+    return { k: best, d: bd };
+  };
+
+  it('is the same route for everyone on a given day', () => {
+    expect(JSON.stringify(dailyRoute(world, '2026-03-14'))).toBe(JSON.stringify(dailyRoute(buildWorld(), '2026-03-14')));
+  });
+
+  it('puts every gate on the route, ahead of the start, in climbing order', () => {
+    for (let i = 0; i < 120; i++) {
+      const date = new Date(Date.UTC(2026, 0, 1) + i * 86400_000).toISOString().slice(0, 10);
+      const d = dailyRoute(world, date);
+      const rings = [...d.gates, d.finish];
+      expect(rings.length).toBeGreaterThanOrEqual(4);
+      let prev = along(d.region, d.start).k;
+      for (const g of rings) {
+        const a = along(d.region, g.pos);
+        expect(a.d).toBeLessThanOrEqual(1.6);
+        expect(a.k).toBeGreaterThan(prev);
+        prev = a.k;
+      }
+      expect(d.flags.every((f) => !f.startsWith(`r${d.region + 1}_`))).toBe(true);
+    }
   });
 });

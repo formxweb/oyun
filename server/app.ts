@@ -4,7 +4,6 @@ import { PRODUCT_BY_SKU } from '../src/core/catalog/store';
 import { dailyRoute, dateKey, weekKey, type DailyRoute } from '../src/core/daily';
 import { parseReplay, SIM_VERSION, SpeedrunCheck, verifyDaily, verifyReplay, worldHash, type Replay } from '../src/core/replay';
 import { buildWorld } from '../src/core/world/index';
-import { allMemoryFlags } from '../src/core/world/memory';
 import { TRIAL_PAR } from '../src/core/world/par';
 import type { World } from '../src/core/world/world';
 import type { BoardEntry, Db, Player, Purchase } from './db';
@@ -60,7 +59,6 @@ export function createGameServer(opt: ServerOptions): GameServer {
   const tokenMs = (opt.tokenDays ?? 90) * 86400_000;
   const world = buildWorld();
   const hash = worldHash(world);
-  const canonical = allMemoryFlags(world);
   const dailyCache = new Map<string, DailyRoute>();
   const loginLimit = new RateLimiter(opt.limits?.login ?? 20);
   const runLimit = new RateLimiter(opt.limits?.runs ?? 30);
@@ -218,7 +216,7 @@ export function createGameServer(opt: ServerOptions): GameServer {
   function daily(date: string): DailyRoute {
     let r = dailyCache.get(date);
     if (!r) {
-      r = dailyRoute(world, date, canonical);
+      r = dailyRoute(world, date);
       dailyCache.set(date, r);
       if (dailyCache.size > 8) dailyCache.delete(dailyCache.keys().next().value!);
     }

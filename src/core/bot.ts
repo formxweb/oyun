@@ -404,13 +404,32 @@ export interface TrialReport {
   inputs: InputFrame[];
 }
 
-/**
- * Run a time trial the way a player would: a trial-mode simulation from the trial's start
- * with its canonical memory state and techniques, following the region's route from the
- * point nearest the start to the point nearest the finish, then into the finish ring.
- * Nothing is forced; the recorded inputs are a complete replay of the run.
- */
+/** A timed course: a time trial or a Daily Summit route. */
+export interface Course {
+  id: string;
+  mode: 'trial' | 'daily';
+  start: V3;
+  startYaw: number;
+  flags: string[];
+  abilities: number;
+  gates: { pos: V3; r: number }[];
+  finish: { pos: V3; r: number };
+  trial?: TrialDef;
+  wind?: { x: number; z: number };
+}
+
+/** Run a time trial the way a player would (see runCourse). */
 export function runTrial(world: World, trial: TrialDef, route: RouteStep[], opts: Partial<BotOptions> = {}): TrialReport {
+  return runCourse(world, { id: trial.id, mode: 'trial', start: trial.start, startYaw: trial.startYaw, flags: trial.flags, abilities: trial.abilities, gates: trial.gates, finish: trial.finish, trial }, route, opts);
+}
+
+/**
+ * Run a timed course the way a player would: a simulation in the course's mode from its start
+ * with its memory state and techniques, following the region's route from the point nearest
+ * the start to the point nearest the finish, then into the finish ring. Nothing is forced; the
+ * recorded inputs are a complete replay of the run.
+ */
+export function runCourse(world: World, trial: Course, route: RouteStep[], opts: Partial<BotOptions> = {}): TrialReport {
   const near = (p: V3, from: number) => {
     let best = from;
     let bd = Infinity;
@@ -428,7 +447,7 @@ export function runTrial(world: World, trial: TrialDef, route: RouteStep[], opts
   const k1 = near(trial.finish.pos, k0 + 1);
   const rep: TrialReport = { trial: trial.id, finished: false, seconds: 0, failed: [], missingFlags: [], inputs: [] };
   const sim = new Simulation(world, {
-    mode: 'trial',
+    mode: trial.mode,
     abilities: trial.abilities,
     flags: trial.flags,
     collected: [],
@@ -437,7 +456,10 @@ export function runTrial(world: World, trial: TrialDef, route: RouteStep[], opts
     spawn: { pos: trial.start, yaw: trial.startYaw },
     recallAnywhere: false,
     ngPlus: false,
-    trial,
+    trial: trial.trial,
+    gates: trial.trial ? undefined : trial.gates,
+    finish: trial.trial ? undefined : trial.finish,
+    wind: trial.wind,
   });
   const bo: BotOptions = { abilities: trial.abilities, flags: trial.flags, ...opts };
   const done = () => !!sim.trial?.finished;

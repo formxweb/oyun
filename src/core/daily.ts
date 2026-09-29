@@ -1,5 +1,6 @@
 import { hashString, v3, type V3 } from './math';
 import { Rng } from './rng';
+import { memoryFlagsBelow } from './world/memory';
 import { ALL_ABILITIES } from './world/types';
 import type { World } from './world/world';
 
@@ -21,7 +22,37 @@ export interface DailyRoute {
   par: number;
 }
 
-export const DAILY_WIND = { x: 5, z: 3 };
+/**
+ * A region's Daily Summit material: its start (the lowest anchor) and the authored gates that
+ * lie on the route ahead of it, in the order a climber meets them.
+ */
+function dailyCourse(world: World, region: number): { region: number; pool: V3[]; startA: World['anchors'][number] | undefined } {
+  const route = world.regionData[region].route;
+  const along = (p: V3) => {
+    let best = 0;
+    let bd = Infinity;
+    route.forEach((s, k) => {
+      const d = Math.hypot(s.p.x - p.x, s.p.y - p.y, s.p.z - p.z);
+      if (d < bd) {
+        bd = d;
+        best = k;
+      }
+    });
+    return { k: best, d: bd };
+  };
+  const startA = world.anchors.filter((a) => a.region === region).sort((a, b) => a.pos.y - b.pos.y)[0];
+  const k0 = startA ? along(startA.pos).k : 0;
+  const pool = world.dailyGates[region]
+    .map((p) => ({ p, ...along(p) }))
+    // a gate is a ring over a route point (1 m up); anything off the route or behind the start is skipped
+    .filter((g) => g.d <= 1.6 && g.k > k0)
+    .sort((a, b) => a.k - b.k || a.p.y - b.p.y)
+    .map((g) => g.p);
+  return { region, pool, startA };
+}
+
+/** A steady crosswind (m/s²): enough to have to lean into on long jumps, never enough to decide one. */
+export const DAILY_WIND = { x: 1.6, z: 1.0 };
 
 /** UTC date key YYYY-MM-DD. */
 export function dateKey(d: Date): string {
@@ -40,17 +71,18 @@ export function weekKey(d: Date): string {
 
 /**
  * The Daily Summit: every player gets the same authored gates, chosen deterministically
- * from the date. Gates always climb; the route stays inside one region so it is short and
- * replayable, and all techniques are available.
+ * from the date. The route stays inside one region so it is short and replayable; the gates
+ * come in the order a climber meets them on the way up. The region is as first climbed (the
+ * regions below remember you; its own levers and counterweights are yours to work), with every
+ * technique available.
  */
-export function dailyRoute(world: World, date: string, canonicalFlags: string[]): DailyRoute {
+export function dailyRoute(world: World, date: string): DailyRoute {
   const rng = new Rng(hashString('vertigo-daily:' + date));
-  const candidates = world.dailyGates.map((g, i) => ({ g, i })).filter((x) => x.g.length >= 5);
-  const pick = candidates[rng.int(0, candidates.length - 1)];
-  const region = pick.i;
-  const pool = [...pick.g].sort((a, b) => a.y - b.y);
+  const courses = world.dailyGates.map((_, i) => dailyCourse(world, i)).filter((c) => c.pool.length >= 5);
+  const course = courses[rng.int(0, courses.length - 1)];
+  const { region, pool, startA } = course;
   const count = Math.min(pool.length, rng.int(4, 6));
-  // keep ordering by height but choose a spread: split pool in `count` bands, one from each
+  // keep route order but choose a spread: split the pool in `count` bands, one from each
   const gates: V3[] = [];
   for (let b = 0; b < count; b++) {
     const lo = Math.floor((b * pool.length) / count);
@@ -59,8 +91,6 @@ export function dailyRoute(world: World, date: string, canonicalFlags: string[])
   }
   const mods: DailyModifier[] = ['none', 'none', 'wind', 'dusk', 'nofall'];
   const modifier = mods[rng.int(0, mods.length - 1)];
-  const anchors = world.anchors.filter((a) => a.region === region).sort((a, b) => a.pos.y - b.pos.y);
-  const startA = anchors[0];
   const start = startA ? v3(startA.pos.x, startA.pos.y + 0.05, startA.pos.z) : world.regionData[region].spawn.pos;
   const last = gates.pop()!;
   let dist = 0;
@@ -80,7 +110,7 @@ export function dailyRoute(world: World, date: string, canonicalFlags: string[])
     modifier,
     wind: modifier === 'wind' ? { ...DAILY_WIND } : undefined,
     abilities: ALL_ABILITIES,
-    flags: canonicalFlags,
+    flags: memoryFlagsBelow(world.regionData, region),
     // rough par: 1.6 m/s along the straight-line route
     par: Math.max(30, Math.round(dist / 1.6)),
   };

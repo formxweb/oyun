@@ -522,7 +522,7 @@ export class App implements UIContext {
   daily(): DailyRoute | null {
     if (!this.dailyUnlocked()) return null;
     const key = dateKey(new Date());
-    if (!this.dailyCache || this.dailyCache.date !== key) this.dailyCache = dailyRoute(this.world, key, allMemoryFlags(this.world));
+    if (!this.dailyCache || this.dailyCache.date !== key) this.dailyCache = dailyRoute(this.world, key);
     return this.dailyCache;
   }
 
