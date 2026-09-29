@@ -1,0 +1,16 @@
+node_modules/
+dist/
+dist-*/
+coverage/
+*.log
+.DS_Store
+server/data/
+test-results/
+playwright-report/
+platforms/steam/node_modules/
+platforms/steam/app/
+platforms/android/node_modules/
+platforms/android/android/app/build/
+.env
+.env.*
+!.env.example
