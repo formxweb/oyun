@@ -334,6 +334,7 @@ const UI: Record<string, string> = {
   'save.conflict': 'Bulut kaydın ile bu cihaz farklı.',
   'save.conflict.local': 'Bu cihazı koru ({progress})',
   'save.conflict.cloud': 'Bulut kaydını kullan ({progress})',
+  'save.cloud.newer': 'Buluttaki kayıtta bu cihazdakinden daha fazla ilerleme var; bu yüzden üzerine yazılmadı.',
   'save.saved': 'Kaydedildi',
 
   'err.webgl': 'Cihazın 3B grafikleri başlatamadı. Lütfen tarayıcını ya da ekran kartı sürücülerini güncelle.',

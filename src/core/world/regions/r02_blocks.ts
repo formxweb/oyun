@@ -376,9 +376,6 @@ export function region02(gate: { x: number; y: number; z: number }): { data: Reg
       { pos: v3(cis.x, cis.top + 1, cis.z), r: 3.5 },
     ],
     finish: { pos: v3(crown.x, crown.top + 1, crown.z), r: 3.5 },
-    medals: { bronze: 240, silver: 190, gold: 150, perfect: 125 },
-    flags: ['r2_stack'],
-    abilities: Ability.Sprint | Ability.Mantle | Ability.Slide | Ability.Vault | Ability.LedgeGrab | Ability.Rope,
     master: [{ pos: v3(polar(mA.a - 3, 58.5).x, (mA.top + mEnd.top) / 2, polar(mA.a - 3, 58.5).z), r: 3 }],
   });
   for (let i = 3; i < all.length; i += 8) b.daily(all[i].x, all[i].top + 1, all[i].z);

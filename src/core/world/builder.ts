@@ -465,10 +465,17 @@ export class RegionBuilder {
 
   // ---------------------------------------------------------------- modes
 
-  trial(t: Omit<TrialDef, 'region'>): void {
+  /**
+   * A time trial. Its memory state, techniques and medal times are not authored here: they
+   * follow from the world (see applyTrialRules in world/index.ts).
+   */
+  trial(t: Omit<TrialDef, 'region' | 'flags' | 'abilities' | 'medals'>): void {
     const off = (p: V3): V3 => v3(p.x + this.ox, p.y + this.oy, p.z + this.oz);
     this.data.trials.push({
       ...t,
+      flags: [],
+      abilities: 0,
+      medals: { bronze: 0, silver: 0, gold: 0, perfect: 0 },
       region: this.region,
       start: off(t.start),
       gates: t.gates.map((g) => ({ pos: off(g.pos), r: g.r })),

@@ -246,9 +246,6 @@ export function region10(entry: Exit): { data: RegionData; exit: Exit } {
       { pos: v3(gIn.x, yG + 1, gIn.z), r: 4 },
     ],
     finish: { pos: v3(L(0, -4.4).x, cy + 1, L(0, -4.4).z), r: 3.5 },
-    medals: { bronze: 150, silver: 120, gold: 98, perfect: 84 },
-    flags: [],
-    abilities: 16383,
     master: [{ pos: v3(M[2].x, M[2].top + 0.5, M[2].z), r: 2.5 }],
   });
   for (const d of [I[2], I[5], I[8]]) b.daily(d.x, d.top + 1, d.z);

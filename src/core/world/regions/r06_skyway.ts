@@ -241,10 +241,10 @@ export function region06(entry: Exit): { data: RegionData; exit: Exit } {
   const toUp = { x: up.x - cs.x, z: up.z - cs.z };
   const tul = Math.hypot(toUp.x, toUp.z);
   const ce = { x: up.x - (toUp.x / tul) * 6.4, z: up.z - (toUp.z / tul) * 6.4 };
-  const lever = { x: nC.x + polar(nTop.a + 12, 9.4).x, z: nC.z + polar(nTop.a + 12, 9.4).z };
-  b.decor('box', lever.x, nTop.top + 0.7, lever.z, 0.14, 1.4, 0.14, { mat: Mat.Brass, tint: BRASS });
-  b.trigger('t.r6.cars', 'r6_cars', { type: 'interact', pos: v3(lever.x, nTop.top + 1, lever.z), radius: 2.4 }, { textKey: 'mem.r6.cars', delay: 1.0 });
-  b.route(nC.x + polar(nTop.a + 8, 8.8).x, nTop.top, nC.z + polar(nTop.a + 8, 8.8).z, 'interact', { expect: 'r6_cars' });
+  // The drive lever is in the car itself (as on the Ring Line): board, pull, ride. Nobody is
+  // ever left watching the car leave without them.
+  b.trigger('t.r6.cars', 'r6_cars', { type: 'interact', pos: v3(cs.x, nTop.top + 1, cs.z), radius: 2.0 }, { textKey: 'mem.r6.cars', delay: 1.0 });
+  b.route(cs.x, nTop.top, cs.z, 'interact', { expect: 'r6_cars' });
   b.routeFlags = ['r6_cable', 'r6_cars'];
   // the car hangs from a cable between the stations
   const carYaw = radialYaw(nTop.a);
@@ -252,6 +252,7 @@ export function region06(entry: Exit): { data: RegionData; exit: Exit } {
     { kind: 'path', origin: v3(cs.x, nTop.top, cs.z), points: [v3(0, 0, 0), v3(ce.x - cs.x, upY - nTop.top, ce.z - cs.z)], segTime: [18], pause: 3.5, activeFlag: 'r6_cars' },
     () => {
       b.plat(0, 0, 0, 3.6, 3.6, 0.4, { mat: Mat.Metal, tint: RED, yaw: carYaw });
+      b.decor('box', 1.2, 0.7, 1.2, 0.14, 1.4, 0.14, { mat: Mat.Brass, tint: BRASS });
       b.decor('box', 0, 2.6, 0, 3.6, 0.12, 3.6, { mat: Mat.Metal, tint: 0x7a2a24, yaw: carYaw });
       b.decor('box', 0, 3.6, 0, 0.12, 2.0, 0.12, { mat: Mat.Metal, tint: 0x3a3e44 });
       for (const [dx, dz] of [
@@ -395,9 +396,6 @@ export function region06(entry: Exit): { data: RegionData; exit: Exit } {
       { pos: v3(eTop.x, eTop.top + 1, eTop.z), r: 3 },
     ],
     finish: { pos: v3(gate.x, gate.top + 1, gate.z), r: 3.5 },
-    medals: { bronze: 330, silver: 265, gold: 215, perfect: 185 },
-    flags: ['r6_cable', 'r6_cars'],
-    abilities: Ability.Sprint | Ability.Mantle | Ability.Slide | Ability.Vault | Ability.LedgeGrab | Ability.Rope | Ability.WallRun | Ability.WallJump | Ability.WallClimb | Ability.Roll | Ability.Swing | Ability.Zip | Ability.Tether,
     master: [{ pos: v3(M[2].x, M[2].top + 0.5, M[2].z), r: 2.5 }],
   });
   for (const d of [A[2], A[8], N[3], N[9], E[2], E[6], F[2], F[5]]) b.daily(d.x, d.top + 1, d.z);

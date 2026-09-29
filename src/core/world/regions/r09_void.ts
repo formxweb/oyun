@@ -303,9 +303,6 @@ export function region09(entry: Exit): { data: RegionData; exit: Exit } {
       { pos: v3(dEnd.x, dEnd.top + 1, dEnd.z), r: 3 },
     ],
     finish: { pos: v3(sTop.x, sTop.top + 1, sTop.z), r: 4 },
-    medals: { bronze: 320, silver: 255, gold: 205, perfect: 175 },
-    flags: ['r9_tower_top', 'r9_pivot'],
-    abilities: Ability.Sprint | Ability.Mantle | Ability.Slide | Ability.Vault | Ability.LedgeGrab | Ability.Rope | Ability.WallRun | Ability.WallJump | Ability.WallClimb | Ability.Roll | Ability.Swing | Ability.Zip | Ability.Tether | Ability.GravityShift,
     master: [{ pos: v3((dEnd.x + s0.x) / 2, dEnd.top + 4, (dEnd.z + s0.z) / 2), r: 6 }],
   });
   for (const d of [D[2], D[5], S[2], S[5]]) b.daily(d.x, d.top + 1, d.z);

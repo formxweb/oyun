@@ -18,7 +18,7 @@ import { GhostRunner, GhostStore } from './ghosts';
 import { detectLang, fmtDuration, fmtNumber, fmtTime, setLang, t } from './i18n/i18n';
 import { InputManager, type Action } from './input/input';
 import { TouchControls } from './input/touch';
-import { Platform } from './platform/platform';
+import { Platform, type GamesPlugin } from './platform/platform';
 import type { IStoreService } from './platform/store/IStoreService';
 import { GooglePlayStoreService, type VertigoBillingPlugin } from './platform/store/GooglePlayStoreService';
 import { MockStoreService, NoStoreService } from './platform/store/MockStoreService';
@@ -539,7 +539,7 @@ export class App implements UIContext {
       ngPlus: false,
       gates: d.gates,
       finish: d.finish,
-      wind: d.modifier === 'wind' ? { x: 5, z: 3 } : undefined,
+      wind: d.wind,
     };
     const s = this.makeSession(cfg);
     s.frozen = true;
@@ -790,13 +790,14 @@ export class App implements UIContext {
       case 'memory': {
         const tr = this.world.triggers.find((x) => x.id === e.trigger);
         if (tr?.flag.startsWith('hint_')) {
-          this.showHint(tr.textKey ?? '');
+          if (story) this.showHint(tr.textKey ?? '');
           break;
         }
         this.audio.memory();
         if (tr?.flag === 'r1_bell') this.audio.bell();
-        if (tr?.textKey && this.settings.value.access.subtitles) this.hud.subtitle(t(tr.textKey), 6, true);
-        if (tr?.focus) this.rig.setFocus(new THREE.Vector3(tr.focus.x, tr.focus.y, tr.focus.z), 2.5);
+        // on the clock (trials, daily) the world still changes, but the story does not interrupt
+        if (story && tr?.textKey && this.settings.value.access.subtitles) this.hud.subtitle(t(tr.textKey), 6, true);
+        if (story && tr?.focus) this.rig.setFocus(new THREE.Vector3(tr.focus.x, tr.focus.y, tr.focus.z), 2.5);
         this.rig.impulse(0.3, this.camSettings());
         this.input.rumble(0.4, 400);
         if (story) {
@@ -807,7 +808,7 @@ export class App implements UIContext {
         break;
       }
       case 'flag':
-        if (e.flag.startsWith('hint_')) {
+        if (story && e.flag.startsWith('hint_')) {
           const tr = this.world.triggers.find((x) => x.flag === e.flag);
           if (tr?.textKey) this.showHint(tr.textKey);
         }
@@ -942,6 +943,7 @@ export class App implements UIContext {
         abilities: s.sim.cfg.abilities,
         flags: s.sim.cfg.flags,
         spawn: s.sim.cfg.spawn,
+        wind: s.sim.cfg.wind,
         ticks: s.inputs.length,
       },
       inputs: s.inputs.slice(),
@@ -1249,8 +1251,19 @@ export class App implements UIContext {
       platform = 'steam';
       proof = await this.platform.steam.authTicket().catch(() => null);
       name = await this.platform.steam.playerName().catch(() => name);
+    } else if (this.platform.kind === 'android') {
+      const games = this.platform.plugin<GamesPlugin>('VertigoGames');
+      const r = games ? await games.signIn().catch(() => null) : null;
+      if (r?.serverAuthCode) {
+        platform = 'google';
+        proof = r.serverAuthCode;
+        name = r.displayName || name;
+      }
     }
-    const ok = await this.net.signIn(platform, proof, this.profile.data.profileId, name);
+    let ok = await this.net.signIn(platform, proof, this.profile.data.profileId, name);
+    // A platform account that cannot be verified right now still gets the player online as a
+    // guest; the platform identity is linked on a later sign-in.
+    if (!ok && platform !== 'guest') ok = await this.net.signIn('guest', null, this.profile.data.profileId, name);
     if (!ok) this.ui.message('settings.cloud.status.err');
     else {
       await this.syncCloud();
@@ -1267,6 +1280,7 @@ export class App implements UIContext {
     if (!this.net.account) return;
     const remote = await this.net.pullSave();
     const localProgress = SaveManager.progress(this.profile.data);
+    let keepLocal = false;
     if (remote) {
       let parsed: SaveData | null = null;
       try {
@@ -1282,7 +1296,13 @@ export class App implements UIContext {
           const choice = parsed;
           await new Promise<void>((resolve) => {
             this.ui.dialog(t('save.conflict'), [
-              { label: t('save.conflict.local', { progress: Math.round(localProgress) }), action: () => resolve() },
+              {
+                label: t('save.conflict.local', { progress: Math.round(localProgress) }),
+                action: () => {
+                  keepLocal = true;
+                  resolve();
+                },
+              },
               {
                 label: t('save.conflict.cloud', { progress: Math.round(remoteProgress) }),
                 primary: true,
@@ -1300,7 +1320,10 @@ export class App implements UIContext {
         }
       }
     }
-    await this.net.pushSave(JSON.stringify(this.profile.data), SaveManager.progress(this.profile.data), this.profile.data.updatedAt);
+    const pushed = await this.net.pushSave(JSON.stringify(this.profile.data), SaveManager.progress(this.profile.data), this.profile.data.updatedAt, keepLocal);
+    // The cloud has further progress from another device that this one has not seen: never
+    // overwrite it silently — ask, as for a first sync.
+    if (pushed === 'conflict' && !keepLocal) this.ui.toast(t('save.cloud.newer'));
   }
 
   async addFriend(code: string): Promise<boolean> {

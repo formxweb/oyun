@@ -464,7 +464,8 @@ export class Simulation {
       if (Math.abs(t.region - this.region) > 1 && t.cond.type !== 'collect' && t.cond.type !== 'flags') continue;
       if (t.ngPlusOnly && !this.cfg.ngPlus) continue;
       if (t.storyOnly && this.cfg.ngPlus) continue;
-      if (this.cfg.mode !== 'story') continue;
+      // Every mode works the world's mechanisms (a trial pulls the same levers as the story);
+      // collection and anchor conditions simply never hold outside the story.
       if (this.evalCond(t, pressedInteract)) this.fire(t);
     }
   }

@@ -29,6 +29,14 @@ interface CapacitorGlobal {
   Plugins?: Record<string, unknown>;
 }
 
+/**
+ * Play Games Services v2 sign-in (platforms/android VertigoGamesPlugin). Returns a one-time
+ * server auth code; only the backend can exchange it, with credentials the app never holds.
+ */
+export interface GamesPlugin {
+  signIn(): Promise<{ serverAuthCode: string | null; displayName?: string }>;
+}
+
 export interface HapticsPlugin {
   impact(o: { style: 'LIGHT' | 'MEDIUM' | 'HEAVY' }): Promise<void>;
   vibrate(o: { duration: number }): Promise<void>;

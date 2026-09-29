@@ -307,9 +307,6 @@ export function region03(entry: Exit): { data: RegionData; exit: Exit } {
       { pos: v3(hp.x, fTop0 + 1, hp.z), r: 3.5 },
     ],
     finish: { pos: v3(fTop.x, fTop.top + 1, fTop.z), r: 3.5 },
-    medals: { bronze: 260, silver: 205, gold: 165, perfect: 140 },
-    flags: ['r3_crane', 'r3_hook'],
-    abilities: Ability.Sprint | Ability.Mantle | Ability.Slide | Ability.Vault | Ability.LedgeGrab | Ability.Rope | Ability.WallRun,
     master: [{ pos: v3(mPos.x, mastTop + 0.5, mPos.z), r: 2.5 }],
   });
   for (const d of [A[2], B[2], B[6], D[2], D[6], D[10], F[1], F[4]]) b.daily(d.x, d.top + 1, d.z);

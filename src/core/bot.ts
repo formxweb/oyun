@@ -3,7 +3,7 @@ import { toLocal } from './collision';
 import { datan2, type V3 } from './math';
 import { Mode, type PlayerState } from './player';
 import { Simulation, type SimConfig } from './sim';
-import { Shape, type RouteStep, type Solid } from './world/types';
+import { Shape, type RouteStep, type Solid, type TrialDef } from './world/types';
 import type { World } from './world/world';
 
 /**
@@ -120,6 +120,23 @@ function findLadderFoot(world: World, from: V3, to: V3): { x: number; z: number;
 
 const idle = (yaw: number): InputFrame => quantizeInput({ mx: 0, mz: 0, yaw, btn: 0 });
 
+/** Walk (not run) to a point on the current surface; false if the player left the ground. */
+function walkTo(sim: Simulation, x: number, z: number, out: InputFrame[]): boolean {
+  const y0 = sim.player.y;
+  for (let t = 0; t < 360; t++) {
+    const p = sim.player;
+    const dx = x - p.x;
+    const dz = z - p.z;
+    const d = Math.hypot(dx, dz);
+    if (d < 0.15 && Math.hypot(p.vx, p.vz) < 0.4) return true;
+    if (!p.grounded || Math.abs(p.y - y0) > 0.4) return false;
+    const f = d > 0.15 ? quantizeInput({ mx: 0, mz: Math.min(1, d * 1.5 + 0.15), yaw: datan2(-dx / d, -dz / d), btn: 0 }) : idle(datan2(-p.fx, -p.fz));
+    sim.step(f);
+    out.push(f);
+  }
+  return false;
+}
+
 /** Play one leg from the simulation's current state. On success the sim holds the new state. */
 export function playLeg(world: World, sim: Simulation, step: RouteStep, out: InputFrame[], opts: BotOptions): LegResult {
   const to = step.p;
@@ -161,7 +178,8 @@ export function playLeg(world: World, sim: Simulation, step: RouteStep, out: Inp
     tried++;
     sim.restore(snap);
     const inputs: InputFrame[] = [];
-    // Run-up: back up along the starting platform (a player would walk back; we place to save time).
+    // Run-up: walk back along the starting platform, as a player would (inputs only, so the
+    // run stays a faithful replay).
     if (s.runup > 0 && sim.player.grounded) {
       let bx = start.x;
       let bz = start.z;
@@ -172,8 +190,8 @@ export function playLeg(world: World, sim: Simulation, step: RouteStep, out: Inp
         bx = nx;
         bz = nz;
       }
-      if (bx !== start.x || bz !== start.z) {
-        sim.ctrl.place(sim.player, bx, start.y + 0.02, bz, baseYaw);
+      if (Math.hypot(bx - start.x, bz - start.z) > 0.3) {
+        if (!walkTo(sim, bx, bz, inputs)) continue;
         for (let i = 0; i < 3; i++) {
           const f = idle(baseYaw);
           sim.step(f);
@@ -196,7 +214,10 @@ export function playLeg(world: World, sim: Simulation, step: RouteStep, out: Inp
       let tx = to.x - p.x;
       let tz = to.z - p.z;
       if (p.frame !== 0) {
-        const [lx, , lz] = toLocal(p.frame, to.x, to.y, to.z);
+        // Walking up a wall toward a floor above its lip: keep running over the edge (aim past
+        // the lip) instead of stopping when the target is "underfoot" in the wall's frame.
+        const over = (step.frame ?? 0) === 0 ? 2 : 0;
+        const [lx, , lz] = toLocal(p.frame, to.x, to.y + over, to.z);
         const [px, , pz] = toLocal(p.frame, p.x, p.y, p.z);
         tx = lx - px;
         tz = lz - pz;
@@ -269,7 +290,9 @@ export function playLeg(world: World, sim: Simulation, step: RouteStep, out: Inp
       const near = Math.hypot(q.x - to.x, q.z - to.z);
       const onSurface = q.grounded && q.frame === (step.frame ?? 0) && Math.abs(q.y - to.y) < 0.35 && (targets.has(q.groundId) || near < 1.2);
       onSurfaceTicks = onSurface ? onSurfaceTicks + 1 : 0;
-      if (onSurface && (near < 0.8 || (onSurfaceTicks > 150 && near < 3)) && (!step.expect || sim.st.flags.has(step.expect))) {
+      // A ride that ends on the moving thing itself is over when it has stopped moving.
+      const settled = !riding || q.groundId < 0 || world.solids[q.groundId].mover < 0 || Math.hypot(q.platVx, q.platVz) < 0.2;
+      if (onSurface && settled && (near < 0.8 || (onSurfaceTicks > 150 && near < 3)) && (!step.expect || sim.st.flags.has(step.expect))) {
         ok = true;
         break;
       }
@@ -366,6 +389,99 @@ export function verifyRoute(world: World, region: number, route: RouteStep[], op
       for (let k = 0; k < 10; k++) sim.step(idle(0));
     } else rep.ticks += r.ticks;
     onLeg?.(i, r.ok);
+  }
+  return rep;
+}
+
+export interface TrialReport {
+  trial: string;
+  finished: boolean;
+  /** seconds on the trial clock */
+  seconds: number;
+  failed: { index: number; action: string }[];
+  /** memory flags a leg needed that the trial's canonical state does not provide */
+  missingFlags: string[];
+  inputs: InputFrame[];
+}
+
+/**
+ * Run a time trial the way a player would: a trial-mode simulation from the trial's start
+ * with its canonical memory state and techniques, following the region's route from the
+ * point nearest the start to the point nearest the finish, then into the finish ring.
+ * Nothing is forced; the recorded inputs are a complete replay of the run.
+ */
+export function runTrial(world: World, trial: TrialDef, route: RouteStep[], opts: Partial<BotOptions> = {}): TrialReport {
+  const near = (p: V3, from: number) => {
+    let best = from;
+    let bd = Infinity;
+    for (let k = from; k < route.length; k++) {
+      const q = route[k].p;
+      const d = Math.hypot(q.x - p.x, (q.y - p.y) * 2, q.z - p.z);
+      if (d < bd) {
+        bd = d;
+        best = k;
+      }
+    }
+    return best;
+  };
+  const k0 = near(trial.start, 0);
+  const k1 = near(trial.finish.pos, k0 + 1);
+  const rep: TrialReport = { trial: trial.id, finished: false, seconds: 0, failed: [], missingFlags: [], inputs: [] };
+  const sim = new Simulation(world, {
+    mode: 'trial',
+    abilities: trial.abilities,
+    flags: trial.flags,
+    collected: [],
+    litAnchors: [],
+    lastAnchor: null,
+    spawn: { pos: trial.start, yaw: trial.startYaw },
+    recallAnywhere: false,
+    ngPlus: false,
+    trial,
+  });
+  const bo: BotOptions = { abilities: trial.abilities, flags: trial.flags, ...opts };
+  const done = () => !!sim.trial?.finished;
+  const legTo = (step: RouteStep, index: number) => {
+    for (const f of step.flags ?? []) {
+      for (let k = 0; k < 1200 && sim.isPending(f); k++) {
+        const fr = idle(0);
+        sim.step(fr);
+        rep.inputs.push(fr);
+      }
+      if (!sim.st.flags.has(f) && !rep.missingFlags.includes(f)) rep.missingFlags.push(f);
+    }
+    const r = playLeg(world, sim, step, rep.inputs, bo);
+    if (!r.ok) rep.failed.push({ index, action: step.a });
+    return r.ok;
+  };
+  // from the trial start onto the route
+  const first = route[k0];
+  if (Math.hypot(first.p.x - trial.start.x, first.p.z - trial.start.z) > 0.6) {
+    approach(sim, first.p, rep.inputs);
+    if (Math.hypot(sim.player.x - first.p.x, sim.player.z - first.p.z) > 0.8) legTo({ ...first, a: 'walk' }, k0);
+  }
+  for (let i = k0 + 1; i <= k1 && !done() && !rep.failed.length; i++) {
+    approach(sim, route[i - 1].p, rep.inputs);
+    legTo(route[i], i);
+  }
+  // into the finish ring
+  if (!done() && !rep.failed.length) {
+    const f = trial.finish.pos;
+    for (let t = 0; t < 600 && !done(); t++) {
+      const p = sim.player;
+      const dx = f.x - p.x;
+      const dz = f.z - p.z;
+      const d = Math.hypot(dx, dz) || 1;
+      const fr = quantizeInput({ mx: 0, mz: d > 0.3 ? 1 : 0, yaw: datan2(-dx / d, -dz / d), btn: 0 });
+      sim.step(fr);
+      rep.inputs.push(fr);
+    }
+  }
+  rep.finished = done();
+  if (rep.finished) {
+    // the replay ends at the finish
+    rep.inputs.length = sim.trial!.finishTick;
+    rep.seconds = sim.trial!.finishTick / 120;
   }
   return rep;
 }

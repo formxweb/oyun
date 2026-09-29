@@ -8,8 +8,9 @@ import { region07 } from './regions/r07_abandoned';
 import { region08 } from './regions/r08_storm';
 import { region09 } from './regions/r09_void';
 import { region10 } from './regions/r10_above';
-import { PAR_TIMES } from './par';
-import type { RegionData } from './types';
+import { memoryFlagsBelow } from './memory';
+import { PAR_TIMES, TRIAL_PAR } from './par';
+import { BASE_ABILITIES, type RegionData } from './types';
 import { World } from './world';
 
 /**
@@ -31,18 +32,27 @@ export function buildRegions(): RegionData[] {
 }
 
 /**
- * Time-trial medals from the verified par times: Perfect is close to the route bot's run, Bronze
- * is a steady, careful climb.
+ * Time-trial rules, derived from the world rather than authored per trial so they cannot drift:
+ *  - memory: the regions below remember the player; this region is as found on the first climb,
+ *    and its mechanisms (levers, counterweights, winches) are worked during the run as in the story
+ *  - techniques: everything learned up to and including this region
+ *  - medals: from the bot's verified trial run (Perfect is close to it, Bronze a steady climb)
  */
-function applyMedals(regions: RegionData[]): RegionData[] {
+export function applyTrialRules(regions: RegionData[]): RegionData[] {
+  let abilities = BASE_ABILITIES;
   regions.forEach((r, i) => {
-    const par = PAR_TIMES[i];
-    if (!par) return;
-    for (const t of r.trials) t.medals = { perfect: Math.ceil(par * 1.15), gold: Math.ceil(par * 1.45), silver: Math.ceil(par * 1.9), bronze: Math.ceil(par * 2.6) };
+    for (const c of r.collectibles) if (c.kind === 'lesson' && c.ability) abilities |= c.ability;
+    const flags = memoryFlagsBelow(regions, i);
+    for (const t of r.trials) {
+      t.flags = flags;
+      t.abilities = abilities;
+      const par = TRIAL_PAR[t.id] ?? PAR_TIMES[i];
+      if (par) t.medals = { perfect: Math.ceil(par * 1.15), gold: Math.ceil(par * 1.45), silver: Math.ceil(par * 1.9), bronze: Math.ceil(par * 2.6) };
+    }
   });
   return regions;
 }
 
 export function buildWorld(): World {
-  return new World(applyMedals(buildRegions()));
+  return new World(applyTrialRules(buildRegions()));
 }

@@ -111,10 +111,14 @@ export class Online {
     this.kv.remove(TOKEN_KEY);
   }
 
-  async pushSave(saveJson: string, progress: number, updatedAt: number): Promise<'ok' | 'conflict' | 'error'> {
+  /**
+   * Upload the save. The server refuses to replace a cloud save that has more progress unless
+   * `force` is set (the player chose this device's save); even then it keeps the old version.
+   */
+  async pushSave(saveJson: string, progress: number, updatedAt: number, force = false): Promise<'ok' | 'conflict' | 'error'> {
     if (!this.account) return 'error';
     try {
-      const r = await this.req<{ status: string }>('PUT', '/v1/save', { data: saveJson, progress, updatedAt });
+      const r = await this.req<{ status: string }>('PUT', '/v1/save', { data: saveJson, progress, updatedAt, force });
       this.lastSync = Date.now();
       this.lastError = false;
       return r.status === 'conflict' ? 'conflict' : 'ok';

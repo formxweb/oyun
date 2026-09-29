@@ -14,10 +14,14 @@ export interface DailyRoute {
   gates: { pos: V3; r: number }[];
   finish: { pos: V3; r: number };
   modifier: DailyModifier;
+  /** crosswind on 'wind' days (part of the simulation config, so part of every replay) */
+  wind?: { x: number; z: number };
   abilities: number;
   flags: string[];
   par: number;
 }
+
+export const DAILY_WIND = { x: 5, z: 3 };
 
 /** UTC date key YYYY-MM-DD. */
 export function dateKey(d: Date): string {
@@ -74,6 +78,7 @@ export function dailyRoute(world: World, date: string, canonicalFlags: string[])
     gates: gates.map((pos) => ({ pos, r: 3 })),
     finish: { pos: last, r: 3 },
     modifier,
+    wind: modifier === 'wind' ? { ...DAILY_WIND } : undefined,
     abilities: ALL_ABILITIES,
     flags: canonicalFlags,
     // rough par: 1.6 m/s along the straight-line route

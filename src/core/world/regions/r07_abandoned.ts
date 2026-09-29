@@ -1,7 +1,7 @@
 import { v3 } from '../../math';
 import { RegionBuilder, quantYaw } from '../builder';
 import { facadeRot, hangCable, helix, lamp, numeral, pillar, polar, type HelixDeck } from '../kit';
-import { Ability, Mat, SolidFlag, type RegionData } from '../types';
+import { Mat, SolidFlag, type RegionData } from '../types';
 import type { Exit } from './r03_construction';
 
 /**
@@ -386,9 +386,6 @@ export function region07(entry: Exit): { data: RegionData; exit: Exit } {
       { pos: v3(land.x, landY + 1, land.z), r: 3 },
     ],
     finish: { pos: v3(balc.x, landY + 1, balc.z), r: 3 },
-    medals: { bronze: 300, silver: 240, gold: 195, perfect: 165 },
-    flags: ['r7_collapse', 'r7_bell'],
-    abilities: Ability.Sprint | Ability.Mantle | Ability.Slide | Ability.Vault | Ability.LedgeGrab | Ability.Rope | Ability.WallRun | Ability.WallJump | Ability.WallClimb | Ability.Roll | Ability.Swing | Ability.Zip | Ability.Tether,
     master: [{ pos: v3(timber.x, wallTopY + 1, timber.z), r: 2.5 }],
   });
   for (const d of [S[2], S[6], Q[2], Q[6], T[2], T[6]]) b.daily(d.x, d.top + 1, d.z);

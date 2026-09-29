@@ -3,14 +3,15 @@ import { hashString, type V3 } from './math';
 import { Simulation, type SimConfig, type SimMode } from './sim';
 import { trialScore, medalFor, type Medal } from './scoring';
 import { T } from './tuning';
-import type { TrialDef } from './world/types';
+import type { DailyRoute } from './daily';
+import { BASE_ABILITIES, type TrialDef } from './world/types';
 import type { World } from './world/world';
 
 /**
  * Physics version. Bump whenever movement or collision changes; replays and leaderboard
  * entries from other versions are not comparable.
  */
-export const SIM_VERSION = 'sim-10';
+export const SIM_VERSION = 'sim-11';
 
 export interface ReplayHeader {
   simVersion: string;
@@ -21,6 +22,8 @@ export interface ReplayHeader {
   abilities: number;
   flags: string[];
   spawn: { pos: V3; yaw: number };
+  /** Daily Summit crosswind, when the day has one */
+  wind?: { x: number; z: number };
   ticks: number;
 }
 
@@ -159,10 +162,17 @@ export function serializeReplay(r: Replay): string {
   return JSON.stringify({ h: r.header, i: toBase64(encodeInputs(r.inputs)) });
 }
 
-export function parseReplay(s: string): Replay {
+export function parseReplay(s: string, maxFrames?: number): Replay {
   const o = JSON.parse(s) as { h: ReplayHeader; i: string };
-  if (!o || typeof o.i !== 'string' || !o.h) throw new Error('bad replay');
-  return { header: o.h, inputs: decodeInputs(fromBase64(o.i)) };
+  if (!o || typeof o.i !== 'string' || !o.h || typeof o.h !== 'object') throw new Error('bad replay');
+  const h = o.h;
+  const num = (n: unknown) => typeof n === 'number' && isFinite(n);
+  const vec = (v: unknown) => !!v && num((v as V3).x) && num((v as V3).y) && num((v as V3).z);
+  if (typeof h.simVersion !== 'string' || typeof h.worldHash !== 'string' || typeof h.track !== 'string' || typeof h.mode !== 'string') throw new Error('bad replay header');
+  if (!num(h.abilities) || !Array.isArray(h.flags) || h.flags.some((f) => typeof f !== 'string')) throw new Error('bad replay header');
+  if (!h.spawn || !vec(h.spawn.pos) || !num(h.spawn.yaw)) throw new Error('bad replay header');
+  if (h.wind !== undefined && h.wind !== null && !(num(h.wind.x) && num(h.wind.z))) throw new Error('bad replay header');
+  return { header: h, inputs: decodeInputs(fromBase64(o.i), maxFrames) };
 }
 
 export function configFromHeader(h: ReplayHeader, trial?: TrialDef, gates?: { pos: V3; r: number }[], finish?: { pos: V3; r: number }): SimConfig {
@@ -179,6 +189,7 @@ export function configFromHeader(h: ReplayHeader, trial?: TrialDef, gates?: { po
     trial,
     gates,
     finish,
+    wind: h.wind ?? undefined,
   };
 }
 
@@ -206,6 +217,8 @@ export function verifyReplay(world: World, r: Replay, trial: TrialDef | undefine
   if (r.header.simVersion !== SIM_VERSION) return fail('version');
   if (r.header.worldHash !== worldHash(world)) return fail('world');
   if (trial) {
+    if (r.header.mode !== 'trial' || r.header.track !== trial.id) return fail('track');
+    if (r.header.wind) return fail('wind');
     if (r.header.abilities !== trial.abilities) return fail('abilities');
     if ([...r.header.flags].sort().join(',') !== [...trial.flags].sort().join(',')) return fail('flags');
     const d = Math.hypot(r.header.spawn.pos.x - trial.start.x, r.header.spawn.pos.y - trial.start.y, r.header.spawn.pos.z - trial.start.z);
@@ -234,6 +247,100 @@ export function verifyReplay(world: World, r: Replay, trial: TrialDef | undefine
   const medal = trial ? medalFor(seconds, falls, trial.medals) : 'none';
   return { ok: true, finishTick: tr.finishTick, seconds, falls, maxMult: sim.risk.maxMult, efficiency, style, score, medal, splits: tr.splits, masterGates: tr.masterHit.size };
 }
+
+/**
+ * Verify a Daily Summit run against the route the server itself derives for that date: same
+ * start, techniques, memory state and weather, and no major fall on a no-fall day.
+ */
+export function verifyDaily(world: World, r: Replay, route: DailyRoute): VerifyResult {
+  const h = r.header;
+  const bad = (reason: string) => ({ ...verifyFail, reason });
+  if (h.mode !== 'daily' || h.track !== 'daily:' + route.date) return bad('track');
+  if (h.abilities !== route.abilities) return bad('abilities');
+  if ([...h.flags].sort().join(',') !== [...route.flags].sort().join(',')) return bad('flags');
+  if (Math.hypot(h.spawn.pos.x - route.start.x, h.spawn.pos.y - route.start.y, h.spawn.pos.z - route.start.z) > 0.01) return bad('spawn');
+  const w = route.wind;
+  if (!!w !== !!h.wind || (w && h.wind && (w.x !== h.wind.x || w.z !== h.wind.z))) return bad('wind');
+  const v = verifyReplay(world, r, undefined, route.gates, route.finish, route.par);
+  if (v.ok && route.modifier === 'nofall' && v.falls > 0) return bad('nofall');
+  return v;
+}
+
+export interface SpeedrunResult {
+  ok: boolean;
+  reason?: string;
+  seconds: number;
+  ticks: number;
+}
+
+/**
+ * Verify a full-journey speedrun: a fresh Standard journey from the Ground, simulated until
+ * the Cradle ends the journey. A journey is long, so the check advances in slices and a server
+ * can interleave it with other work.
+ */
+export class SpeedrunCheck {
+  private readonly sim: Simulation | null = null;
+  private i = 0;
+  result: SpeedrunResult | null = null;
+
+  constructor(
+    world: World,
+    private readonly r: Replay,
+  ) {
+    const h = r.header;
+    const fail = (reason: string) => {
+      this.result = { ok: false, reason, seconds: 0, ticks: 0 };
+    };
+    const s0 = world.regionData[0].spawn;
+    if (h.simVersion !== SIM_VERSION) fail('version');
+    else if (h.worldHash !== worldHash(world)) fail('world');
+    else if (h.mode !== 'story' || h.track !== 'speedrun') fail('track');
+    else if (h.abilities !== BASE_ABILITIES || h.flags.length || h.wind) fail('start');
+    else if (Math.hypot(h.spawn.pos.x - s0.pos.x, h.spawn.pos.y - s0.pos.y, h.spawn.pos.z - s0.pos.z) > 0.01) fail('spawn');
+    else
+      this.sim = new Simulation(world, {
+        mode: 'story',
+        abilities: BASE_ABILITIES,
+        flags: [],
+        collected: [],
+        litAnchors: [],
+        lastAnchor: null,
+        spawn: s0,
+        recallAnywhere: false,
+        ngPlus: false,
+      });
+  }
+
+  /** Simulate up to `budget` more ticks. Returns the result once known, else null. */
+  advance(budget: number): SpeedrunResult | null {
+    if (this.result || !this.sim) return this.result;
+    const sim = this.sim;
+    const end = Math.min(this.r.inputs.length, this.i + budget);
+    for (; this.i < end; this.i++) {
+      sim.step(this.r.inputs[this.i]);
+      if (sim.st.flags.has(SPEEDRUN_END_FLAG)) {
+        this.result = { ok: true, seconds: sim.tick / 120, ticks: sim.tick };
+        return this.result;
+      }
+    }
+    if (this.i >= this.r.inputs.length) this.result = { ok: false, reason: 'unfinished', seconds: 0, ticks: 0 };
+    return this.result;
+  }
+
+  get progress(): number {
+    return this.r.inputs.length ? this.i / this.r.inputs.length : 1;
+  }
+}
+
+export function verifySpeedrun(world: World, r: Replay): SpeedrunResult {
+  const c = new SpeedrunCheck(world, r);
+  return c.advance(Infinity)!;
+}
+
+/** The memory flag set when the player enters the Cradle: the journey's (and a speedrun's) end. */
+export const SPEEDRUN_END_FLAG = 'r10_cradle';
+
+const verifyFail: VerifyResult = { ok: false, finishTick: 0, seconds: 0, falls: 0, maxMult: 1, efficiency: 0, style: 0, score: 0, medal: 'none', splits: [], masterGates: 0 };
 
 /** Ghost track: positions and facing sampled every tick from a replay. */
 export interface GhostTrack {

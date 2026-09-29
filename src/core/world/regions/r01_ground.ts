@@ -515,15 +515,12 @@ export function region01(): R1Out {
     startYaw: 0,
     gates: [
       { pos: v3(8, 1.2, 91), r: 3 },
-      { pos: v3(-2, 4.6, 55), r: 3.5 },
+      { pos: v3(-6, 4.6, 57), r: 3.5 },
       { pos: v3(stair[9].x, stair[9].top + 1, stair[9].z), r: 3 },
       { pos: v3(stair[25].x, stair[25].top + 1, stair[25].z), r: 3 },
       { pos: v3(overlook.x, overlook.top + 1, overlook.z), r: 3.5 },
     ],
     finish: { pos: v3(end.x, end.top + 1, end.z), r: 3 },
-    medals: { bronze: 190, silver: 150, gold: 120, perfect: 100 },
-    flags: ['r1_collapse', 'net_r1', 'r1_bell'],
-    abilities: Ability.Sprint | Ability.Mantle | Ability.Slide,
     master: [{ pos: v3(polar(pegA, 41).x, 20, polar(pegA, 41).z), r: 3 }],
   });
   for (const d of [stair[3], stair[11], stair[20], stair[29], shelf[6], shelf[20], shelf[30]]) b.daily(d.x, d.top + 1, d.z);

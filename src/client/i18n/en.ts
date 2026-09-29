@@ -334,6 +334,7 @@ const UI: Record<string, string> = {
   'save.conflict': 'Your cloud save and this device differ.',
   'save.conflict.local': 'Keep this device ({progress})',
   'save.conflict.cloud': 'Use cloud save ({progress})',
+  'save.cloud.newer': 'The cloud save has more progress than this device, so it was not replaced.',
   'save.saved': 'Saved',
 
   'err.webgl': 'Your device could not start 3D graphics. Please update your browser or graphics drivers.',

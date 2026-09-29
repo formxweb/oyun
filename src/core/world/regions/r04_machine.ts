@@ -379,9 +379,6 @@ export function region04(entry: Exit): { data: RegionData; exit: Exit } {
       { pos: v3(cage.x, govBase + 1, cage.z), r: 3.5 },
     ],
     finish: { pos: v3(fTop.x, fTop.top + 1, fTop.z), r: 3.5 },
-    medals: { bronze: 330, silver: 260, gold: 205, perfect: 175 },
-    flags: ['r4_valve', 'r4_winch'],
-    abilities: Ability.Sprint | Ability.Mantle | Ability.Slide | Ability.Vault | Ability.LedgeGrab | Ability.Rope | Ability.WallRun | Ability.WallJump | Ability.WallClimb,
     master: [{ pos: v3(cwTop[2].x, cwTop[2].top + 0.5, cwTop[2].z), r: 2.5 }],
   });
   for (const d of [A1[3], A2[2], A2[8], C[2], C[7], C[10], D[2], F[2]]) b.daily(d.x, d.top + 1, d.z);

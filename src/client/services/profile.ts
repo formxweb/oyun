@@ -12,14 +12,9 @@ export interface ProfileHooks {
   onUnlockCosmetic?: (id: string) => void;
 }
 
-/** All flags a finished journey leaves in the world: used to start New Game+ remembered. */
-export function allMemoryFlags(world: World): string[] {
-  const out = new Set<string>();
-  for (const t of world.triggers) if (!t.id.startsWith('t.') || !t.flag.startsWith('hint_')) out.add(t.flag);
-  for (const s of world.solids) if (s.tag && s.tag.startsWith('net_')) out.add(s.tag);
-  for (const z of world.zones) if (z.kind === 'trigger' && z.key) out.add(z.key);
-  return [...out].filter((f) => !f.startsWith('hint_'));
-}
+import { allMemoryFlags } from '../../core/world/memory';
+
+export { allMemoryFlags };
 
 /**
  * Progression: the journey in progress, lifetime collection, achievements and cosmetics.
