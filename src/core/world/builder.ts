@@ -15,6 +15,8 @@ import {
   type RegionMeta,
   type RopeKind,
   type RouteAction,
+  type RouteBranch,
+  type RouteStep,
   type Solid,
   type TriggerCond,
   type TrialDef,
@@ -93,6 +95,7 @@ export class RegionBuilder {
       trials: [],
       dailyGates: [],
       route: [],
+      branches: [],
       spawn: { pos: v3(meta.center.x, meta.baseY + 1, meta.center.z), yaw: 0 },
     };
   }
@@ -296,6 +299,11 @@ export class RegionBuilder {
     return this.solid(Shape.Ramp, (x1 + x2) / 2, lo + h / 2, (z1 + z2) / 2, len / 2, h / 2, width / 2, { ...o, yaw }, up ? Slope.PosX : Slope.NegX);
   }
 
+  /** A thin sloped beam (girder, chain, fallen timber) from end to end along its top surface. */
+  beamBetween(x1: number, z1: number, y1: number, x2: number, z2: number, y2: number, width: number, o: SolidOpts = {}): Solid {
+    return this.rampBetween(x1, z1, y1, x2, z2, y2, width, { ...o, flags: (o.flags ?? 0) | SolidFlag.Thin | SolidFlag.NoWallRun });
+  }
+
   /** Ramp: bottom-centre, size, and which side is high. */
   ramp(x: number, y0: number, z: number, w: number, h: number, d: number, slope: Slope, o: SolidOpts = {}): Solid {
     return this.solid(Shape.Ramp, x, y0 + h / 2, z, w / 2, h / 2, d / 2, o, slope);
@@ -472,8 +480,28 @@ export class RegionBuilder {
     this.data.dailyGates.push(v3(x + this.ox, y + this.oy, z + this.oz));
   }
 
-  route(x: number, y: number, z: number, a: RouteAction, extra: { t?: number; m?: number; note?: string } = {}): void {
-    this.data.route.push({ p: v3(x + this.ox, y + this.oy, z + this.oz), a, ...extra });
+  route(x: number, y: number, z: number, a: RouteAction, extra: { t?: number; m?: number; note?: string; flags?: string[]; expect?: string } = {}): void {
+    (this.routeSink ?? this.data.route).push({ p: v3(x + this.ox, y + this.oy, z + this.oz), a, flags: extra.flags ?? this.routeFlags ?? undefined, ...extra });
+  }
+
+  /** Memory flags subsequent route steps are verified with. */
+  routeFlags: string[] | null = null;
+  private routeSink: RouteStep[] | null = null;
+
+  /** Record the route steps authored in `fn` as an alternative route (risk/master/secret). */
+  branch(id: string, kind: RouteBranch['kind'], fn: () => void): void {
+    const prev = this.routeSink;
+    const prevFlags = this.routeFlags;
+    const steps: RouteStep[] = [];
+    this.routeSink = steps;
+    this.routeFlags = null;
+    try {
+      fn();
+    } finally {
+      this.routeSink = prev;
+      this.routeFlags = prevFlags;
+    }
+    this.data.branches.push({ id, kind, route: steps });
   }
 
   spawn(x: number, y: number, z: number, yaw: number): void {

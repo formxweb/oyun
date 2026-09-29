@@ -50,7 +50,12 @@ export const enum SolidFlag {
   NoShadow = 1024,
   /** Only rendered / collidable while the player is in a major fall (fall-only architecture). */
   FallOnly = 2048,
+  /** Ramps only: a sloped beam THIN_BEAM thick instead of a solid wedge (girders, chains, fallen beams). */
+  Thin = 4096,
 }
+
+/** Thickness of a Thin ramp (a sloped beam). */
+export const THIN_BEAM = 0.3;
 
 /** Ramp slope direction in the solid's local frame: which side is high. */
 export const enum Slope {
@@ -360,6 +365,8 @@ export interface RegionData {
   dailyGates: V3[];
   /** Golden route: the intended main path, used by the bot verifier and guided hints. */
   route: RouteStep[];
+  /** Alternative routes (risk, master, secret) verified by the bot like the main route. */
+  branches: RouteBranch[];
   spawn: { pos: V3; yaw: number };
 }
 
@@ -386,6 +393,12 @@ export type RouteAction =
   | 'interact'
   | 'climb';
 
+export interface RouteBranch {
+  id: string;
+  kind: 'risk' | 'master' | 'secret';
+  route: RouteStep[];
+}
+
 export interface RouteStep {
   p: V3;
   a: RouteAction;
@@ -394,4 +407,8 @@ export interface RouteStep {
   /** which mover to ride / wait for */
   m?: number;
   note?: string;
+  /** world memory state this leg is verified in (defaults to none) */
+  flags?: string[];
+  /** the leg only counts once this memory flag has been set (levers, bells, valves) */
+  expect?: string;
 }

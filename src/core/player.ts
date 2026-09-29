@@ -12,6 +12,7 @@ import {
   toLocal,
   toWorld,
   topAt,
+  bottomAt,
   raycastSolids,
   type LBox,
   type Push,
@@ -583,7 +584,7 @@ export class PlayerController {
     const y0 = p.y + T.crouchHeight - 0.01;
     const y1 = p.y + T.height;
     for (const b of this.col.boxes) {
-      if (b.bottom >= y1 || b.top <= y0) continue;
+      if (bottomAt(b, p.x, p.z) >= y1 || b.top <= y0) continue;
       if (b.shape === Shape.Ramp && topAt(b, p.x, p.z) <= y0) continue;
       if (footOverlap(b, p.x, p.z, r)) return false;
     }
@@ -593,7 +594,7 @@ export class PlayerController {
   private spaceFree(x: number, y: number, z: number, h: number, r: number, ignore = -1): boolean {
     for (const b of this.col.boxes) {
       if (b.id === ignore) continue;
-      if (b.bottom >= y + h - 0.01) continue;
+      if (bottomAt(b, x, z) >= y + h - 0.01) continue;
       const top = b.shape === Shape.Ramp ? topAt(b, x, z) : b.top;
       if (top <= y + 0.02) continue;
       if (footOverlap(b, x, z, r)) return false;
@@ -613,7 +614,7 @@ export class PlayerController {
       let best = -Infinity;
       let bb: LBox | null = null;
       for (const b of this.col.boxes) {
-        if (b.top < ny - 0.01 || b.bottom > p.y + 0.01) continue;
+        if (b.top < ny - 0.01 || bottomAt(b, p.x, p.z) > p.y + 0.01) continue;
         if (!footOverlap(b, p.x, p.z, T.footRadius)) continue;
         const top = topAt(b, p.x, p.z);
         if (top <= p.y + 0.001 && top >= ny - 0.001 && top > best) {
@@ -630,9 +631,10 @@ export class PlayerController {
       let lim = head + dy;
       let hit: LBox | null = null;
       for (const b of this.col.boxes) {
-        if (b.bottom < head - 0.02 || b.bottom >= lim) continue;
+        const bot = bottomAt(b, p.x, p.z);
+        if (bot < head - 0.02 || bot >= lim) continue;
         if (!footOverlap(b, p.x, p.z, T.radius * 0.85)) continue;
-        lim = b.bottom;
+        lim = bot;
         hit = b;
       }
       if (hit) {
@@ -661,7 +663,7 @@ export class PlayerController {
       let best = -Infinity;
       let bb: LBox | null = null;
       for (const b of this.col.boxes) {
-        if (b.top < p.y - down - 0.01 || b.bottom > p.y + up) continue;
+        if (b.top < p.y - down - 0.01 || bottomAt(b, p.x, p.z) > p.y + up) continue;
         if (!footOverlap(b, p.x, p.z, T.footRadius)) continue;
         const top = topAt(b, p.x, p.z);
         if (top <= p.y + up && top >= p.y - down && top > best) {
@@ -696,7 +698,7 @@ export class PlayerController {
     for (let pass = 0; pass < 3; pass++) {
       let any = false;
       for (const b of this.col.boxes) {
-        if (b.bottom >= p.y + h - 0.001) continue;
+        if (bottomAt(b, p.x, p.z) >= p.y + h - 0.001) continue;
         if (b.top <= p.y + stepAllow) continue;
         // Ramps are only walls where their surface (under our centre, clamped) is above our feet.
         if (b.shape === Shape.Ramp && topAt(b, p.x, p.z) <= p.y + stepAllow) continue;
@@ -744,7 +746,7 @@ export class PlayerController {
     let best: WallHit | null = null;
     const r = T.radius + reach;
     for (const b of this.col.boxes) {
-      if (b.bottom > yLo || b.top < yHi) continue;
+      if (bottomAt(b, p.x, p.z) > yLo || b.top < yHi) continue;
       const ps = circlePush(b, p.x, p.z, r, this.push);
       if (!ps) continue;
       if (ps.nx * dx + ps.nz * dz > -0.5) continue;
@@ -762,7 +764,7 @@ export class PlayerController {
     for (const b of this.col.boxes) {
       if (!isGrabbable(b)) continue;
       if (b.id === p.ledgeIgnoreId && p.ledgeIgnore > 0) continue;
-      if (b.top < p.y + minAbove || b.bottom > p.y + maxAbove) continue;
+      if (b.top < p.y + minAbove || bottomAt(b, p.x, p.z) > p.y + maxAbove) continue;
       const ps = circlePush(b, p.x, p.z, reach, this.push);
       if (!ps) continue;
       if (ps.nx * dx + ps.nz * dz > -0.45) continue;
@@ -844,6 +846,8 @@ export class PlayerController {
     }
     this.setGround(p, landed);
 
+    // Walking into a ladder takes hold of it.
+    if (this.wmag > 0.3 && this.tryGrabRope(p, true)) return;
     // Vault / mantle on obstacles we run into.
     if (this.ncontacts > 0 && this.wmag > 0.3) this.tryVault(p, preSpeed);
   }
@@ -1414,7 +1418,7 @@ export class PlayerController {
             let blocked = false;
             for (const o of this.col.boxes) {
               if (o.id === b.id) continue;
-              if (o.bottom >= p.y + T.height || o.top <= p.y + 0.1) continue;
+              if (bottomAt(o, p.x, p.z) >= p.y + T.height || o.top <= p.y + 0.1) continue;
               if (footOverlap(o, p.x, p.z, T.radius * 0.9)) {
                 blocked = true;
                 break;
@@ -1656,7 +1660,7 @@ export class PlayerController {
     return toLocal(f, w.x, w.y, w.z);
   }
 
-  private tryGrabRope(p: PlayerState): boolean {
+  private tryGrabRope(p: PlayerState, laddersOnly = false): boolean {
     const abil = this.abil;
     const f = p.frame;
     const [wx, wy, wz] = toWorld(f, p.x, p.y + 1.2, p.z);
@@ -1667,7 +1671,7 @@ export class PlayerController {
       const ro = this.world.ropes[id];
       if (!this.world.isRopeActive(ro, this.st)) continue;
       if (id === p.ropeIgnoreId && p.ropeIgnore > 0) continue;
-      if (ro.kind === 'hook') continue;
+      if (ro.kind === 'hook' || (laddersOnly && ro.kind !== 'ladder')) continue;
       const [ax, ay, az] = this.ropeLocal(ro, 'a', f);
       const [bx, by, bz] = this.ropeLocal(ro, 'b', f);
       if (ro.kind === 'ladder') {
@@ -1837,7 +1841,7 @@ export class PlayerController {
     const fz = hz;
     let blocked = false;
     for (const b of this.col.boxes) {
-      if (b.bottom >= fy + T.height - 0.25 || b.top <= fy + 0.05) continue;
+      if (bottomAt(b, fx, fz) >= fy + T.height - 0.25 || b.top <= fy + 0.05) continue;
       if (footOverlap(b, fx, fz, T.radius * 0.8)) {
         blocked = true;
         break;
@@ -1890,7 +1894,7 @@ export class PlayerController {
     p.vz = dz * p.ropeSpeed;
     // Collision with anything along the cable ends the ride.
     for (const b of this.col.boxes) {
-      if (b.bottom >= p.y + T.height - 0.3 || b.top <= p.y + 0.3) continue;
+      if (bottomAt(b, p.x, p.z) >= p.y + T.height - 0.3 || b.top <= p.y + 0.3) continue;
       if (footOverlap(b, p.x, p.z, T.radius * 0.7)) {
         this.detach(p);
         p.vx *= 0.3;
@@ -2205,7 +2209,7 @@ export class PlayerController {
     const h = this.bodyH(p);
     this.col.gather(f, x - 1, y - 1, z - 1, x + 1, y + h + 1, z + 1, this.st, this.tick);
     for (const b of this.col.boxes) {
-      if (b.bottom >= y + h - 0.35 || b.top <= y + 0.35) continue;
+      if (bottomAt(b, x, z) >= y + h - 0.35 || b.top <= y + 0.35) continue;
       const ps = circlePush(b, x, z, T.radius, this.push);
       if (!ps || ps.depth <= 0.22) continue;
       if (b.shape === Shape.Ramp && topAt(b, x, z) <= y + 0.35) continue;

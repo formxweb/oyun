@@ -341,6 +341,11 @@ export function evalMover(m: Mover, t: number, tick: number, st: WorldState): vo
     m.oyaw = m.kind === 'rotate' ? m.phase : 0;
     return;
   }
+  if (m.activeFlag !== null) {
+    // Woken this session: run from the moment it was woken, starting at its parked pose.
+    const t0 = st.flagTick.get(m.activeFlag);
+    if (t0 !== undefined && t0 > -1e8) t = Math.max(0, tick - t0) / TICK_RATE;
+  }
   switch (m.kind) {
     case 'path': {
       const n = m.points.length;

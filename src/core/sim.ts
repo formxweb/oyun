@@ -62,6 +62,30 @@ const newStats = (y: number): SimStats => ({
   longestChain: 0,
 });
 
+export interface SimSnapshot {
+  player: PlayerState;
+  flags: string[];
+  flagTick: [string, number][];
+  crumble: [number, number][];
+  fallActive: boolean;
+  risk: RiskState;
+  stats: SimStats;
+  collected: string[];
+  lit: string[];
+  lastAnchor: string | null;
+  abilities: number;
+  tick: number;
+  region: number;
+  area: string | null;
+  trial: TrialRun | null;
+  pending: { flag: string; at: number; trigger: string }[];
+  prevBtn: number;
+  fired: string[];
+  standTicks: [string, number][];
+  catchCooldown: number;
+  lastGroundY: number;
+}
+
 export interface TrialRun {
   def: TrialDef | null;
   gates: { pos: V3; r: number }[];
@@ -359,6 +383,11 @@ export class Simulation {
 
   // ---------------------------------------------------------------- progression hooks
 
+  /** A memory trigger has fired and this flag is waiting out its delay. */
+  isPending(flag: string): boolean {
+    return this.pending.some((p) => p.flag === flag);
+  }
+
   setFlag(flag: string): void {
     if (this.st.flags.has(flag)) return;
     this.st.flags.add(flag);
@@ -572,6 +601,61 @@ export class Simulation {
     this.stats.respawns++;
     this.catchCooldown = ticks(0.5);
     this.events.push({ k: 'respawn', reason });
+  }
+
+  /** Capture the complete mutable state (used by the route bot to branch and retry). */
+  snapshot(): SimSnapshot {
+    return {
+      player: { ...this.player },
+      flags: [...this.st.flags],
+      flagTick: [...this.st.flagTick],
+      crumble: [...this.st.crumble],
+      fallActive: this.st.fallActive,
+      risk: { ...this.risk },
+      stats: { ...this.stats },
+      collected: [...this.collected],
+      lit: [...this.lit],
+      lastAnchor: this.lastAnchor,
+      abilities: this.abilities,
+      tick: this.tick,
+      region: this.region,
+      area: this.area,
+      trial: this.trial ? { ...this.trial, masterHit: new Set(this.trial.masterHit), splits: [...this.trial.splits] } : null,
+      pending: this.pending.map((p) => ({ ...p })),
+      prevBtn: this.prevBtn,
+      fired: [...this.firedTriggers],
+      standTicks: [...this.standTicks],
+      catchCooldown: this.catchCooldown,
+      lastGroundY: this.lastGroundY,
+    };
+  }
+
+  restore(s: SimSnapshot): void {
+    Object.assign(this.player, s.player);
+    this.st.flags = new Set(s.flags);
+    this.st.flagTick = new Map(s.flagTick);
+    this.st.crumble = new Map(s.crumble);
+    this.st.fallActive = s.fallActive;
+    Object.assign(this.risk, s.risk);
+    Object.assign(this.stats, s.stats);
+    this.collected.clear();
+    for (const c of s.collected) this.collected.add(c);
+    this.lit.clear();
+    for (const l of s.lit) this.lit.add(l);
+    this.lastAnchor = s.lastAnchor;
+    this.abilities = s.abilities;
+    this.tick = s.tick;
+    this.region = s.region;
+    this.area = s.area;
+    this.trial = s.trial ? { ...s.trial, masterHit: new Set(s.trial.masterHit), splits: [...s.trial.splits] } : null;
+    this.pending = s.pending.map((p) => ({ ...p }));
+    this.prevBtn = s.prevBtn;
+    this.firedTriggers.clear();
+    for (const f of s.fired) this.firedTriggers.add(f);
+    this.standTicks = new Map(s.standTicks);
+    this.catchCooldown = s.catchCooldown;
+    this.lastGroundY = s.lastGroundY;
+    this.world.applyMovers(this.tick, this.st);
   }
 
   /** Nearest zone of a kind (for presentation). */

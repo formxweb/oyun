@@ -1,10 +1,18 @@
 import { region01 } from './regions/r01_ground';
+import { region02 } from './regions/r02_blocks';
+import { region03 } from './regions/r03_construction';
 import type { RegionData } from './types';
 import { World } from './world';
 
-/** Build every region's data fresh (World mutates ids while assembling). */
+/**
+ * Build every region's data fresh (World mutates ids while assembling). Regions are chained:
+ * each begins where the previous region's route ends.
+ */
 export function buildRegions(): RegionData[] {
-  return [region01().data];
+  const r1 = region01();
+  const r2 = region02(r1.gate);
+  const r3 = region03(r2.exit);
+  return [r1.data, r2.data, r3.data];
 }
 
 export function buildWorld(): World {

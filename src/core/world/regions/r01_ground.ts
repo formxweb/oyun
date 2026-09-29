@@ -1,6 +1,6 @@
 import { dcos, dsin, v3 } from '../../math';
 import { RegionBuilder } from '../builder';
-import { cottage, fence, hangCable, helix, lamp, numeral, pillar, polar, tree, type HelixDeck } from '../kit';
+import { beamArc, cottage, fence, hangCable, helix, lamp, numeral, pillar, polar, tree, type HelixDeck } from '../kit';
 import { Ability, Mat, Slope, SolidFlag, type RegionData } from '../types';
 
 /**
@@ -109,15 +109,30 @@ export function region01(): R1Out {
   lamp(b, 25.8, 2.6, 106);
   // windmill: ladder to the top, view of the whole valley
   b.cyl(-44, 0, 104, 3.2, 13, { mat: Mat.Stone, tint: 0xcfc2a6 });
-  b.plat(-44, 13.2, 104, 7.4, 7.4, 0.4, { mat: Mat.Wood, tint: 0x8a6a46 });
+  // the gallery stops short of the ladder side so the climb tops out through its hatch
+  b.plat(-44, 13.2, 103.5, 7.4, 6.4, 0.4, { mat: Mat.Wood, tint: 0x8a6a46 });
   b.decor('cone', -44, 13.2, 104, 3.4, 4.2, 0, { mat: Mat.Tile, tint: 0x8a4a36 });
   b.dbox(-44, 3.5, 107.9, 0.35, 16, 0.12, { mat: Mat.Wood, tint: 0xe8dcc0 });
   b.dbox(-44, 11.3, 107.9, 16, 0.35, 0.12, { mat: Mat.Wood, tint: 0xe8dcc0 });
   b.ladder(-44, 0, 107.2, 13.2, v3(0, 0, 1));
   b.collect('rec.r1.lowmark', 'record', -45.5, 14.3, 102.5);
+  b.branch('secret.r1.windmill', 'secret', () => {
+    b.route(-44, 0, 109, 'run');
+    b.route(-44, 13.2, 104, 'ladder');
+  });
 
   // spawn in front of home, facing the Pillar
   b.spawn(18, 0, 125.2, 0);
+  b.route(18, 0, 125.2, 'run');
+  b.route(14, 0, 111, 'run');
+  b.route(13, 0.8, 108, 'mantle');
+  b.route(9, 0, 100, 'run');
+  b.route(8, 0.15, 91, 'jump');
+  b.route(8, 0, 86, 'jump');
+  b.route(8, 1.1, 80.5, 'mantle');
+  b.route(8, 2.2, 73, 'mantle');
+  b.route(8, 3.3, 68, 'mantle');
+  b.route(-6, 3.6, 57, 'run');
   b.anchor('r1.home', 12.5, 0, 125.5, 0, 'anchor.r1.home', true);
   b.trigger('t.r1.hint.move', 'hint_move', { type: 'enter', min: v3(10, -1, 118), max: v3(26, 4, 126) }, { textKey: 'hint.move' });
 
@@ -196,10 +211,15 @@ export function region01(): R1Out {
 
   // Slide lesson and the Low Gate (a collapsed awning: faster to slide under than crouch).
   b.collect('l.slide', 'lesson', -12, 4.9, 49, Ability.Slide);
-  b.aabb(-26, 4.7, 40.2, -17, 5.3, 46, { mat: Mat.Cloth, tint: 0x9a4a2e });
-  b.wall(-26, 46.2, -17, 46.2, 3.6, 2.6, 0.3, { mat: Mat.Wood, tint: 0x6e5238 });
-  b.dbox(-21.5, 5.3, 43, 9.4, 0.12, 6.2, { mat: Mat.Wood, tint: 0x5a4030 });
-  b.trigger('t.r1.hint.slide', 'hint_slide', { type: 'enter', min: v3(-18, 3, 40), max: v3(-12, 7, 48) }, { textKey: 'hint.slide' });
+  b.aabb(-22, 4.7, 44, -15, 5.3, 48, { mat: Mat.Cloth, tint: 0x9a4a2e });
+  b.wall(-22, 48.3, -15, 48.3, 3.6, 2.6, 0.3, { mat: Mat.Wood, tint: 0x6e5238 });
+  b.dbox(-18.5, 5.3, 46, 7.4, 0.12, 4.2, { mat: Mat.Wood, tint: 0x5a4030 });
+  b.trigger('t.r1.hint.slide', 'hint_slide', { type: 'enter', min: v3(-15, 3, 42), max: v3(-9, 7, 50) }, { textKey: 'hint.slide' });
+  // The Stair Foot: a timber landing at the corner where the Hanging Stair begins.
+  b.plat(-27.2, 3.6, 41.2, 5.2, 4.4, 0.4, { mat: Mat.Wood, tint: 0x9a7a54 });
+  b.route(-12, 3.6, 46, 'run');
+  b.route(-24, 3.6, 46, 'slide');
+  b.route(-27.4, 3.6, 40.2, 'run');
 
   // ------------------------------------------------------------------ the Hanging Stair (SAFE)
   b.zone('area', -80, 3, -80, 80, 46, 80, { key: 'area.r1.stair' });
@@ -278,10 +298,38 @@ export function region01(): R1Out {
   b.rampBetween(-26, 58, 3.6, liftPos.x + 1.6 * Math.sign(-26 - liftPos.x), liftPos.z, liftBottom, 1.6, { mat: Mat.Wood, tint: 0x9a7a54 });
 
   // ------------------------------------------------------------------ RISK: the Anchor Chain
-  // A narrow sloped chain-beam from the Last Floor straight up to the middle of the stair.
-  const chainTop = stair[17];
-  b.rampBetween(-24.6, 64.5, 3.6, chainTop.x + 1.2, chainTop.z + 1.2, chainTop.top, 0.7, { mat: Mat.Rust, tint: 0x6e5040 });
-  b.zone('area', -30, 3, 50, -20, 12, 66, { key: 'area.r1.chain' });
+  // The stair was hung from one great chain wrapped round its outside. It is still taut: a
+  // 60 cm wide iron path that climbs twice as steeply as the stair and skips fourteen decks.
+  const chainFrom = stair[4];
+  const chainTo = stair[18];
+  const CR = 49.6;
+  const plate = (d: HelixDeck, a: number): void => {
+    const pa = polar(a, (47 + CR) / 2);
+    b.plat(pa.x, d.top, pa.z, CR - 46.2, 1.3, 0.3, { mat: Mat.Rust, tint: 0x5e4436, yaw: quant(((a + 90) * Math.PI) / 180) });
+  };
+  plate(chainFrom, chainFrom.a);
+  plate(chainTo, chainTo.a);
+  beamArc(b, chainFrom.a, chainTo.a, CR, chainFrom.top, chainTo.top, 0.6, { mat: Mat.Rust, tint: 0x6e5040 });
+  for (let a = chainFrom.a - 6; a > chainTo.a + 3; a -= 12) {
+    // the chain's hangers: rods up to the deck above
+    const t = (a - chainFrom.a) / (chainTo.a - chainFrom.a);
+    const p = polar(a, CR);
+    b.cable(v3(p.x, chainFrom.top + (chainTo.top - chainFrom.top) * t, p.z), v3(polar(a, 46).x, chainFrom.top + (chainTo.top - chainFrom.top) * t + 9, polar(a, 46).z), 0, Mat.Rust, 0x4a3a30);
+  }
+  const cm = polar((chainFrom.a + chainTo.a) / 2, CR);
+  b.zone('area', cm.x - 30, chainFrom.top - 2, cm.z - 30, cm.x + 30, chainTo.top + 3, cm.z + 30, { key: 'area.r1.chain' });
+  b.branch('risk.r1.chain', 'risk', () => {
+    b.route(chainFrom.x, chainFrom.top, chainFrom.z, 'run');
+    const pp = polar(chainFrom.a, CR);
+    b.route(pp.x, chainFrom.top, pp.z, 'run');
+    const steps = Math.ceil(Math.abs(chainTo.a - chainFrom.a) / 5);
+    for (let i = 1; i <= steps; i++) {
+      const t = i / steps;
+      const p = polar(chainFrom.a + (chainTo.a - chainFrom.a) * t, CR);
+      b.route(p.x, chainFrom.top + (chainTo.top - chainFrom.top) * t, p.z, 'run');
+    }
+    b.route(chainTo.x, chainTo.top, chainTo.z, 'run');
+  });
 
   // ------------------------------------------------------------------ the collapse
   const last = stair[stair.length - 1];
@@ -291,7 +339,7 @@ export function region01(): R1Out {
     for (let i = 0; i < 4; i++) {
       const a = collapseStart - ((i * 3) / 47.5) * (180 / Math.PI);
       const p = polar(a, 47.5);
-      const yaw = ((-(a + 90) * Math.PI) / 180) % (Math.PI * 2);
+      const yaw = (a * Math.PI) / 180;
       b.plat(p.x, last.top, p.z, 3.05, 2.4, 0.2, { mat: Mat.Wood, tint: 0x9a7e56, tag: 'r1_plank', yaw: quant(yaw) });
       b.cable(v3(p.x, last.top - 0.1, p.z), v3(polar(a, PR).x, last.top - 3, polar(a, PR).z), 0, Mat.Wood, 0x6e5238);
       walk.push({ x: p.x, z: p.z, top: last.top, a, yaw, len: 3 });
@@ -304,7 +352,7 @@ export function region01(): R1Out {
   // debris on the ground once it has fallen
   b.when('r1_collapse', () => {
     const d = polar(midA, 50);
-    b.ramp(d.x, 0, d.z, 7, 1.6, 3.2, Slope.PosX, { mat: Mat.Wood, tint: 0x7a6040, yaw: quant(((-(midA + 90)) * Math.PI) / 180) });
+    b.ramp(d.x, 0, d.z, 7, 1.6, 3.2, Slope.PosX, { mat: Mat.Wood, tint: 0x7a6040, yaw: quant((midA * Math.PI) / 180) });
     b.decor('crate', d.x + 2, 0, d.z + 2, 1.2, 0.6, 2.6, { tint: 0x7a6040 });
   });
   // First Fall Line: invisible until you fall past it; once caught, it stays.
@@ -312,6 +360,7 @@ export function region01(): R1Out {
   b.collect('e.r1.first', 'echo', mid.x, 27, mid.z);
   b.trigger('t.r1.hint.fall', 'hint_fall', { type: 'fallPass', pos: v3(mid.x, 36, mid.z), radius: 8 }, { textKey: 'hint.fall' });
 
+  b.route(mid.x, 13.5, mid.z, 'drop', { note: 'the stair gives way; the first Fall Line catches you', expect: 'r1_collapse' });
   // ------------------------------------------------------------------ the Crevice (revealed by the fall)
   const fa = midA;
   const radial = (a: number, r: number) => polar(a, r);
@@ -319,7 +368,7 @@ export function region01(): R1Out {
     const ar = (a * Math.PI) / 180;
     return { x: dcos(ar), z: -dsin(ar) };
   };
-  const flakeYaw = quant(((-(fa + 90)) * Math.PI) / 180);
+  const flakeYaw = quant((fa * Math.PI) / 180);
   const fc = radial(fa, 43.6);
   const t = tang(fa);
   // flake: lower block, two door jambs, upper block
@@ -340,19 +389,29 @@ export function region01(): R1Out {
   b.block(blkB.x, 13.5, blkB.z, 3.0, 27.5, 1.0, { mat: Mat.Rock, tint: 0x958c7e, yaw: flakeYaw });
   b.ladder(blkB.x - t.x * 1.52, 27, blkB.z - t.z * 1.52, 41, v3(-t.x, 0, -t.z));
   b.anchor('r1.crevice', fc.x + t.x * 5, 41, fc.z + t.z * 5, 0, 'anchor.r1.crevice');
+  b.routeFlags = ['r1_collapse', 'net_r1'];
+  b.route(cf.x, 13.5, cf.z, 'run');
+  b.route(blkA.x, 27, blkA.z, 'ladder');
+  b.route(blkB.x, 41, blkB.z, 'ladder');
+  b.route(fc.x + t.x * 1.0, 41, fc.z + t.z * 1.0, 'run');
+  b.route(fc.x - t.x * 6.8, 41, fc.z - t.z * 6.8, 'run');
   b.zone('area', Math.min(fc.x, cf.x) - 9, 12, Math.min(fc.z, cf.z) - 9, Math.max(fc.x, cf.x) + 9, 41, Math.max(fc.z, cf.z) + 9, { key: 'area.r1.crevice' });
 
   // ------------------------------------------------------------------ the Pillar Shelf
-  const shelfA0 = collapseStart - ((12 + 2.6 + 1.75) / 47.5) * (180 / Math.PI);
+  // A broad landing where the walkway (before the collapse) and the flake top (after it) meet.
+  const landA = fa - ((8 + 0.4 + 2) / 44) * (180 / Math.PI);
+  const land = polar(landA, 45.6);
+  b.plat(land.x, 43.2, land.z, 4, 5.6, 0.6, { mat: Mat.Rock, tint: 0xa39988, yaw: quant((landA * Math.PI) / 180) });
+  b.route(land.x, 43.2, land.z, 'mantle');
+  const shelfA0 = landA - ((2 + 1.8 + 1.75) / 44) * (180 / Math.PI);
   const shelf = helix(
     b,
     shelfA0,
     44,
-    43.2,
+    43.5,
     -1,
     [
       { move: 'start', len: 3.5, wid: 4.4 },
-      { move: 'hop', wid: 4 },
       { move: 'climb', wid: 4 },
       { move: 'jump', wid: 4 },
       { move: 'climb', wid: 4 },
@@ -393,6 +452,7 @@ export function region01(): R1Out {
     ],
     { mat: Mat.Rock, tint: 0xa39988 },
   );
+  b.routeFlags = null;
   // Flake top links to the first shelf.
   b.zone('area', -80, 43, -80, 80, 100, 80, { key: 'area.r1.shelf' });
   const overlook = shelf[14];
@@ -422,13 +482,21 @@ export function region01(): R1Out {
   const pegA = best.a + (3.2 / 44) * (180 / Math.PI);
   let py = 5.8;
   let k = 0;
+  const pegs: { x: number; y: number; z: number }[] = [];
   while (py < best.top - 0.5) {
     const a = pegA + (k % 2 ? 1.3 : -1.3);
     const p = polar(a, 41.0);
     b.plat(p.x, py, p.z, 0.7, 0.7, 0.35, { mat: Mat.Wood, tint: 0x7e6040 });
+    pegs.push({ x: p.x, y: py, z: p.z });
     py += 2.1;
     k++;
   }
+  b.branch('master.r1.pegs', 'master', () => {
+    const foot = polar(pegA - 1.3, 42.6);
+    b.route(foot.x, 3.6, foot.z, 'run');
+    for (const p of pegs) b.route(p.x, p.y, p.z, 'mantle');
+    b.route(best.x, best.top, best.z, 'mantle');
+  });
   b.zone('area', polar(pegA, 41).x - 4, 4, polar(pegA, 41).z - 4, polar(pegA, 41).x + 4, best.top, polar(pegA, 41).z + 4, { key: 'area.r1.pegs' });
 
   // ------------------------------------------------------------------ the underside overhead (scale)

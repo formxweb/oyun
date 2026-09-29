@@ -180,6 +180,7 @@ export class App implements UIContext {
     if (this.isTouch) this.platform.lockLandscape();
     this.ui.replace('main');
     if (corrupt) this.ui.message(source === 'backup' ? 'save.corrupt' : 'save.corrupt.none');
+    if (import.meta.env.DEV) this.devStart();
     this.startServices();
     requestAnimationFrame(this.loop);
   }
@@ -1364,6 +1365,31 @@ export class App implements UIContext {
     const def = ACHIEVEMENTS.find((a) => a.id === id);
     if (def) this.platform.achievement(def.steam);
     this.saveNow();
+  }
+
+  /**
+   * Development builds only (stripped from production by Vite): `?dev=x,y,z,yaw[,pitch]&flags=a,b`
+   * drops straight into the world for screenshots and automated visual checks.
+   */
+  private devStart(): void {
+    const q = new URLSearchParams(location.search);
+    const dev = q.get('dev');
+    if (!dev) return;
+    const [x, y, z, yaw, pitch] = dev.split(',').map(Number);
+    this.run = { kind: 'nofall', region: 0, countdown: 0, finished: false, started: true, failed: true };
+    this.makeSession({
+      mode: 'story',
+      abilities: ALL_ABILITIES,
+      flags: (q.get('flags') ?? '').split(',').filter(Boolean),
+      collected: [],
+      litAnchors: [],
+      lastAnchor: null,
+      spawn: { pos: { x, y, z }, yaw: yaw || 0 },
+      recallAnywhere: false,
+      ngPlus: false,
+    });
+    if (!isNaN(pitch)) this.rig.pitch = pitch;
+    this.hud.setVisible(q.get('hud') !== '0');
   }
 
   /** Debug-free accessor used by automated tests (Playwright) to inspect state. */

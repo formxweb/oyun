@@ -148,7 +148,7 @@ export function facade(
 export { v3 };
 export type { V3 };
 
-export type HelixMove = 'start' | 'walk' | 'step' | 'hop' | 'jump' | 'long' | 'climb' | 'ramp' | 'ladder' | 'drop' | 'tall';
+export type HelixMove = 'start' | 'walk' | 'step' | 'hop' | 'jump' | 'long' | 'climb' | 'ramp' | 'ladder' | 'drop' | 'tall' | 'wallrun' | 'chimney' | 'beam';
 
 export interface HelixStep {
   move: HelixMove;
@@ -166,6 +166,28 @@ export interface HelixStep {
   flags?: number;
   /** support style: 'post' timber posts, 'beam' beam to pillar, 'none' */
   support?: 'post' | 'beam' | 'none';
+}
+
+/**
+ * A curved sloped beam following an arc around the Pillar (polar angles in degrees), built from
+ * short straight Thin ramps that overlap slightly so the walking surface is continuous.
+ */
+export function beamArc(b: RegionBuilder, a0: number, a1: number, r: number, y0: number, y1: number, width: number, o: SolidOpts = {}, segDeg = 4): void {
+  const n = Math.max(1, Math.ceil(Math.abs(a1 - a0) / segDeg));
+  const ext = 0.12;
+  for (let i = 0; i < n; i++) {
+    const t0 = i / n;
+    const t1 = (i + 1) / n;
+    const p0 = polar(a0 + (a1 - a0) * t0, r);
+    const p1 = polar(a0 + (a1 - a0) * t1, r);
+    const dx = p1.x - p0.x;
+    const dz = p1.z - p0.z;
+    const l = Math.hypot(dx, dz);
+    const ya = y0 + (y1 - y0) * t0;
+    const yb = y0 + (y1 - y0) * t1;
+    const e = ext / l;
+    b.beamBetween(p0.x - dx * e, p0.z - dz * e, ya - (yb - ya) * e, p1.x + dx * e, p1.z + dz * e, yb + (yb - ya) * e, width, o);
+  }
 }
 
 export interface HelixDeck {
@@ -189,6 +211,9 @@ const MOVE: Record<HelixMove, { gap: number; dh: number }> = {
   ramp: { gap: 4.0, dh: 2.2 },
   ladder: { gap: 0.2, dh: 4.5 },
   drop: { gap: 1.8, dh: -1.5 },
+  wallrun: { gap: 7.0, dh: 0 },
+  chimney: { gap: 0.4, dh: 7.0 },
+  beam: { gap: 0.1, dh: 0 },
 };
 
 /**
@@ -197,7 +222,24 @@ const MOVE: Record<HelixMove, { gap: number; dh: number }> = {
  * only converts that list to coordinates.
  * Angles in degrees; `dir` -1 walks clockwise (decreasing angle) when seen from above.
  */
-export function helix(b: RegionBuilder, a0: number, r: number, y0: number, dir: 1 | -1, steps: HelixStep[], o: { mat?: Mat; tint?: number; pillarR?: number } = {}): HelixDeck[] {
+const ROUTE_ACTION: Record<HelixMove, import('./types').RouteAction> = {
+  start: 'run',
+  walk: 'run',
+  step: 'jump',
+  hop: 'jump',
+  jump: 'jump',
+  long: 'longjump',
+  climb: 'mantle',
+  tall: 'mantle',
+  ramp: 'run',
+  ladder: 'ladder',
+  drop: 'drop',
+  wallrun: 'wallrunR',
+  chimney: 'walljump',
+  beam: 'run',
+};
+
+export function helix(b: RegionBuilder, a0: number, r: number, y0: number, dir: 1 | -1, steps: HelixStep[], o: { mat?: Mat; tint?: number; pillarR?: number; route?: boolean } = {}): HelixDeck[] {
   const out: HelixDeck[] = [];
   let a = a0;
   let top = y0;
@@ -238,6 +280,28 @@ export function helix(b: RegionBuilder, a0: number, r: number, y0: number, dir: 
       b.block(p.x, top - (dh + 0.25), p.z, len, dh, wid * 0.6, { mat, tint: 0x8a7050, yaw });
       b.ladder(lx - tx * 0.0, prev.top, lz, top, v3(-tx, 0, -tz));
     }
+    if (prev && s.move === 'wallrun') {
+      // A wall panel on the outer side of the gap to run along.
+      const mx = (prev.x + p.x) / 2;
+      const mz = (prev.z + p.z) / 2;
+      const ma = (prev.a + a) / 2;
+      const out = polar(ma, r + 1.35);
+      const wlen = gap + 1.2;
+      b.block(out.x, top - 2.2, out.z, wlen, 6.2, 0.5, { mat: s.mat ?? Mat.Plaster, tint: s.tint ?? 0xb8a890, yaw: quantYaw(datan2(-(p.z - prev.z), p.x - prev.x)) });
+      void mx;
+      void mz;
+    }
+    if (prev && s.move === 'chimney') {
+      // Two parallel walls rising over the far half of the previous deck: kick between them
+      // (inner/outer) to climb, then mantle forward onto this deck.
+      const pa = prev.a + dir * ((prev.len / 4) / r) * (180 / Math.PI);
+      const inner = polar(pa, r - 1.4);
+      const outer = polar(pa, r + 1.4);
+      const cyaw = quantYaw(datan2(-tz, tx));
+      const h = top - prev.top + 0.6;
+      b.block(inner.x, prev.top, inner.z, prev.len / 2 + 0.3, h, 0.5, { mat: s.mat ?? Mat.Brick, tint: 0x8a5a48, yaw: cyaw });
+      b.block(outer.x, prev.top, outer.z, prev.len / 2 + 0.3, h, 0.5, { mat: s.mat ?? Mat.Brick, tint: 0x8a5a48, yaw: cyaw });
+    }
     const sup = s.support ?? 'beam';
     if (sup === 'beam' && o.pillarR) {
       // timber strut back to the rock
@@ -247,6 +311,7 @@ export function helix(b: RegionBuilder, a0: number, r: number, y0: number, dir: 
       b.dbox(p.x, top - 6, p.z, 0.2, 5.8, 0.2, { mat: Mat.Wood, tint: 0x6e5238 });
     }
     out.push({ x: p.x, z: p.z, top, a, yaw, len });
+    if (o.route !== false) b.route(p.x, top, p.z, ROUTE_ACTION[s.move]);
     prevLen = len;
   }
   return out;

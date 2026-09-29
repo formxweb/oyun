@@ -1,5 +1,5 @@
 import * as THREE from 'three';
-import { Shape, SolidFlag, type Decor, type Mover, type Solid } from '../../core/world/types';
+import { Shape, SolidFlag, THIN_BEAM, type Decor, type Mover, type Solid } from '../../core/world/types';
 import { CRUMBLE_DELAY, CRUMBLE_RESPAWN, TICK_RATE, type World, type WorldState } from '../../core/world/world';
 import { GeoBuilder } from './geo';
 import { getGlyphAtlas, glyphUV } from './glyphs';
@@ -328,7 +328,7 @@ function addSolid(gb: GeoBuilder, so: Solid, world: boolean): void {
   const z = world ? so.z : so.lz;
   const yaw = world ? so.yaw : so.lyaw;
   if (so.shape === Shape.Box) gb.box(x, y, z, so.hx, so.hy, so.hz, yaw);
-  else if (so.shape === Shape.Ramp) gb.ramp(x, y, z, so.hx, so.hy, so.hz, yaw, so.slope);
+  else if (so.shape === Shape.Ramp) gb.ramp(x, y, z, so.hx, so.hy, so.hz, yaw, so.slope, so.flags & SolidFlag.Thin ? THIN_BEAM : 0);
   else gb.cyl(x, y, z, so.hx, so.hy, so.hx > 3 ? 28 : so.hx > 1 ? 18 : 12);
 }
 

@@ -81,8 +81,8 @@ export class GeoBuilder {
     this.quad(P(hx, -hy, -hz), P(-hx, -hy, -hz), P(-hx, hy, -hz), P(hx, hy, -hz), N(0, 0, -1));
   }
 
-  /** Ramp (wedge). slope: 0 high at +x, 1 high at -x, 2 high at +z, 3 high at -z. */
-  ramp(cx: number, cy: number, cz: number, hx: number, hy: number, hz: number, yaw: number, slope: number): void {
+  /** Ramp (wedge, or a sloped beam of thickness `thin`). slope: 0 high at +x, 1 high at -x, 2 high at +z, 3 high at -z. */
+  ramp(cx: number, cy: number, cz: number, hx: number, hy: number, hz: number, yaw: number, slope: number, thin = 0): void {
     const c = Math.cos(yaw);
     const s = Math.sin(yaw);
     const P = (x: number, y: number, z: number): P3 => [cx + x * c + z * s, cy + y, cz - x * s + z * c];
@@ -124,10 +124,18 @@ export class GeoBuilder {
       const m = map(x, y, z);
       return N(m[0], m[1], m[2]);
     };
-    const len = Math.hypot(2 * ex, 2 * hy);
     // sloped top
     this.quad(Q(-ex, -hy, -ez), Q(-ex, -hy, ez), Q(ex, hy, ez), Q(ex, hy, -ez), QN(-2 * hy, 2 * ex, 0));
-    void len;
+    if (thin > 0) {
+      // a sloped beam: parallel underside, square ends and parallelogram sides
+      const t = thin;
+      this.quad(Q(-ex, -hy - t, ez), Q(-ex, -hy - t, -ez), Q(ex, hy - t, -ez), Q(ex, hy - t, ez), QN(2 * hy, -2 * ex, 0));
+      this.quad(Q(ex, hy - t, ez), Q(ex, hy - t, -ez), Q(ex, hy, -ez), Q(ex, hy, ez), QN(1, 0, 0));
+      this.quad(Q(-ex, -hy - t, -ez), Q(-ex, -hy - t, ez), Q(-ex, -hy, ez), Q(-ex, -hy, -ez), QN(-1, 0, 0));
+      this.quad(Q(-ex, -hy - t, ez), Q(ex, hy - t, ez), Q(ex, hy, ez), Q(-ex, -hy, ez), QN(0, 0, 1));
+      this.quad(Q(ex, hy - t, -ez), Q(-ex, -hy - t, -ez), Q(-ex, -hy, -ez), Q(ex, hy, -ez), QN(0, 0, -1));
+      return;
+    }
     // bottom
     this.quad(Q(-ex, -hy, -ez), Q(ex, -hy, -ez), Q(ex, -hy, ez), Q(-ex, -hy, ez), QN(0, -1, 0));
     // high end

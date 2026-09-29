@@ -1,5 +1,5 @@
 import { clamp } from './math';
-import { Shape, Slope, SolidFlag, type Solid } from './world/types';
+import { Shape, Slope, SolidFlag, THIN_BEAM, type Solid } from './world/types';
 import type { World, WorldState } from './world/world';
 
 /**
@@ -211,6 +211,12 @@ export function topAt(b: LBox, px: number, pz: number): number {
       break;
   }
   return b.bottom + (2 * b.hy * (u + h)) / (2 * h);
+}
+
+/** Height of the underside at (px,pz): the base for wedges and boxes, the beam underside for Thin ramps. */
+export function bottomAt(b: LBox, px: number, pz: number): number {
+  if (b.shape !== Shape.Ramp || (b.flags & SolidFlag.Thin) === 0) return b.bottom;
+  return Math.max(b.bottom, topAt(b, px, pz) - THIN_BEAM);
 }
 
 /** Downhill direction (frame space, unit) and slope ratio rise/run for a ramp. */
