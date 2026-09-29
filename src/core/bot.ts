@@ -137,6 +137,21 @@ export function playLeg(world: World, sim: Simulation, step: RouteStep, out: Inp
   const ladderFoot = step.a === 'ladder' ? findLadderFoot(world, start, to) : null;
   const wallSide = step.a === 'wallrunL' || step.a === 'wallrunR' ? findWallSide(world, start, to) : null;
   const lat = { x: -dz / hd, z: dx / hd };
+  // Updrafts: ride the column up (stay in it) until above the destination, then step across.
+  let draft: { x: number; z: number } | null = null;
+  if (step.a === 'updraft') {
+    let bestD = Infinity;
+    for (const z of world.zones) {
+      if (z.kind !== 'updraft') continue;
+      const cx = (z.min.x + z.max.x) / 2;
+      const cz = (z.min.z + z.max.z) / 2;
+      const d = Math.hypot(cx - (start.x + to.x) / 2, cz - (start.z + to.z) / 2);
+      if (d < bestD && d < 30 && z.max.y > to.y) {
+        bestD = d;
+        draft = { x: cx, z: cz };
+      }
+    }
+  }
   let tried = 0;
   for (const s of STRATS) {
     if (s.wait > 0 && !riding) continue;
@@ -194,6 +209,13 @@ export function playLeg(world: World, sim: Simulation, step: RouteStep, out: Inp
       if (slideTick >= 0 && !jumped) btn |= Btn.Crouch;
       if (jumped && tick - jumpTick < s.hold) btn |= Btn.Jump;
       if (jumped && s.rejump > 0 && tick > jumpTick + s.hold && (tick - jumpTick) % s.rejump < 4) btn |= Btn.Jump;
+      if (draft && p.y < to.y + 0.8 && (p.mode === Mode.Air || tick > 10)) {
+        const ax = draft.x - p.x;
+        const az = draft.z - p.z;
+        const ad = Math.hypot(ax, az);
+        if (ad > 0.3) yaw = datan2(-ax / ad, -az / ad);
+        else mz = 0;
+      }
       if (s.wall > 0 && wallSide !== null && jumped && p.mode === Mode.Air) {
         // steer for the wall at mid-gap until we are running on it
         const off = wallSide - Math.sign(wallSide) * s.wall;

@@ -238,7 +238,9 @@ export class GeoBuilder {
       const p0: P3 = [cx + Math.cos(a0) * r, y0, cz + Math.sin(a0) * r];
       const p1: P3 = [cx + Math.cos(a1) * r, y0, cz + Math.sin(a1) * r];
       const tip: P3 = [cx, y0 + h, cz];
-      this.tri(p0, p1, tip, n, [0, 0], [1, 0], [0.5, h], 1, h + 1);
+      // a cone with negative height hangs downward: flip the winding so it faces out
+      if (h >= 0) this.tri(p0, p1, tip, n, [0, 0], [1, 0], [0.5, h], 1, h + 1);
+      else this.tri(p1, p0, tip, n, [0, 0], [1, 0], [0.5, -h], 1, 1 - h);
     }
   }
 
