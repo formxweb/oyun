@@ -50,6 +50,7 @@ export const T = {
   vaultTime: 0.3,
 
   wallRunMinSpeed: 4.5,
+  wallRunReach: 0.75,
   wallRunSpeed: 6.8,
   wallRunTime: 1.35,
   wallRunGravityEarly: 6,

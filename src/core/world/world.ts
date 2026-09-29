@@ -433,3 +433,23 @@ function segDuration(m: Mover, i: number, n: number): number {
   const [a, b] = segEnds(m, i, n);
   return m.segTime[Math.min(a, b) % m.segTime.length];
 }
+
+/**
+ * Cloud layers, placed from the regions' real heights: haze in the Construction, the cloud sea
+ * under the Skyway, the storm deck, the ceiling above the storm, and the golden sea below Above.
+ */
+export function cloudLayers(regions: { baseY: number; topY: number }[]): { y: number; color: number; density: number; scale: number }[] {
+  const out: { y: number; color: number; density: number; scale: number }[] = [];
+  const at = (i: number) => regions[i];
+  if (at(2)) out.push({ y: at(2).baseY + 40, color: 0xf4efe6, density: 0.3, scale: 520 });
+  if (at(5)) out.push({ y: at(5).baseY - 30, color: 0xffffff, density: 0.62, scale: 700 });
+  if (at(7)) out.push({ y: at(7).baseY - 8, color: 0x6a7282, density: 0.8, scale: 480 });
+  if (at(8)) out.push({ y: at(8).baseY - 12, color: 0x8a92a4, density: 0.72, scale: 520 });
+  if (at(9)) out.push({ y: at(9).baseY - 14, color: 0xffe6c0, density: 0.66, scale: 800 });
+  return out;
+}
+
+/** The highest point of the authored world (top of the last region). */
+export function worldTop(regions: { topY: number }[]): number {
+  return regions.reduce((m, r) => Math.max(m, r.topY), 0);
+}

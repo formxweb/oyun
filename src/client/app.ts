@@ -11,7 +11,7 @@ import type { SimConfig } from '../core/sim';
 import { T } from '../core/tuning';
 import { buildWorld } from '../core/world/index';
 import { ALL_ABILITIES, type TrialDef } from '../core/world/types';
-import { newWorldState, TICK_RATE, type World, type WorldState } from '../core/world/world';
+import { newWorldState, TICK_RATE, worldTop, type World, type WorldState } from '../core/world/world';
 import { AudioEngine } from './audio/audio';
 import { EndingDirector } from './ending';
 import { GhostRunner, GhostStore } from './ghosts';
@@ -51,8 +51,6 @@ interface Run {
   started: boolean;
   failed: boolean;
 }
-
-const WORLD_TOP = 2500;
 
 export class App implements UIContext {
   readonly platform = new Platform();
@@ -154,9 +152,10 @@ export class App implements UIContext {
     };
     this.ui = new UIManager(this.uiRoot, this);
     this.ui.onBackFromRoot = () => this.resume();
+    this.audio.worldTop = worldTop(this.world.regions);
     this.hud = new Hud(
       this.world.regions.map((r, i) => ({ y: r.baseY < 0 ? 0 : r.baseY, name: t('region.' + i) })),
-      WORLD_TOP,
+      worldTop(this.world.regions),
     );
     this.ui.hudLayer.appendChild(this.hud.el);
     this.ui.touchLayer.appendChild(this.touch.el);

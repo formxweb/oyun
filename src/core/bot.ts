@@ -55,11 +55,12 @@ interface Strategy {
   rejump: number; // ticks between extra jump presses (wall jumps, chimneys), 0 = none
   aim: number; // yaw offset (radians)
   alternate: boolean; // chimney: face alternately left/right of travel
+  wall: number; // wall run: metres short of the wall face to aim at after take-off (0 = off)
 }
 
 const STRATS: Strategy[] = (() => {
   const out: Strategy[] = [];
-  const base: Strategy = { runup: 0, jumpAt: -1, sprint: true, slide: false, wait: 0, hold: 40, rejump: 0, aim: 0, alternate: false };
+  const base: Strategy = { runup: 0, jumpAt: -1, sprint: true, slide: false, wait: 0, hold: 40, rejump: 0, aim: 0, alternate: false, wall: 0 };
   out.push({ ...base, sprint: false });
   out.push({ ...base });
   for (const runup of [0, 3, 6])
@@ -72,8 +73,35 @@ const STRATS: Strategy[] = (() => {
   for (const aim of [0.5, -0.5, 0.25, -0.25]) for (const jumpAt of [0.6, 1.4]) out.push({ ...base, runup: 6, jumpAt, aim });
   // chimneys: kick between two walls; `aim` picks the first wall (left/right)
   for (const jumpAt of [0.2, 1.0, 1.8, 2.6]) for (const aim of [1, -1]) for (const sprint of [false, true]) out.push({ ...base, jumpAt, aim, sprint, alternate: true, hold: 6 });
+  // wall runs: take off, then steer at a point just short of the wall's face at mid-gap
+  for (const wall of [0.3, 0.7, 1.1]) for (const jumpAt of [0.4, 1.2, 2.0]) for (const runup of [3, 6]) out.push({ ...base, runup, jumpAt, wall });
   return out;
 })();
+
+/** Lateral offset (signed, metres) of a wall beside the middle of a leg, or null if none. */
+function findWallSide(world: World, from: V3, to: V3): number | null {
+  const mx = (from.x + to.x) / 2;
+  const mz = (from.z + to.z) / 2;
+  const dx = to.x - from.x;
+  const dz = to.z - from.z;
+  const l = Math.hypot(dx, dz) || 1;
+  const lx = -dz / l;
+  const lz = dx / l;
+  const y = Math.max(from.y, to.y) + 1.0;
+  const ids: number[] = [];
+  for (let k = 0.4; k <= 4; k += 0.2) {
+    for (const sgn of [1, -1]) {
+      const px = mx + lx * k * sgn;
+      const pz = mz + lz * k * sgn;
+      world.querySolids(px - 0.05, y - 0.05, pz - 0.05, px + 0.05, y + 0.05, pz + 0.05, ids);
+      for (const i of ids) {
+        const so = world.solids[i];
+        if (so.minY <= y && so.maxY >= y && containsXZ(so, px, pz, 0)) return k * sgn;
+      }
+    }
+  }
+  return null;
+}
 
 function findLadderFoot(world: World, from: V3, to: V3): { x: number; z: number; yaw: number } | null {
   let best = Infinity;
@@ -107,10 +135,13 @@ export function playLeg(world: World, sim: Simulation, step: RouteStep, out: Inp
   const riding = step.a === 'ride' || step.a === 'wait' || step.a === 'interact';
   const maxTicks = opts.maxTicks ?? (riding ? 3600 : 1500);
   const ladderFoot = step.a === 'ladder' ? findLadderFoot(world, start, to) : null;
+  const wallSide = step.a === 'wallrunL' || step.a === 'wallrunR' ? findWallSide(world, start, to) : null;
+  const lat = { x: -dz / hd, z: dx / hd };
   let tried = 0;
   for (const s of STRATS) {
     if (s.wait > 0 && !riding) continue;
     if (s.alternate && step.a !== 'walljump') continue;
+    if (s.wall > 0 && wallSide === null) continue;
     tried++;
     sim.restore(snap);
     const inputs: InputFrame[] = [];
@@ -163,6 +194,14 @@ export function playLeg(world: World, sim: Simulation, step: RouteStep, out: Inp
       if (slideTick >= 0 && !jumped) btn |= Btn.Crouch;
       if (jumped && tick - jumpTick < s.hold) btn |= Btn.Jump;
       if (jumped && s.rejump > 0 && tick > jumpTick + s.hold && (tick - jumpTick) % s.rejump < 4) btn |= Btn.Jump;
+      if (s.wall > 0 && wallSide !== null && jumped && p.mode === Mode.Air) {
+        // steer for the wall at mid-gap until we are running on it
+        const off = wallSide - Math.sign(wallSide) * s.wall;
+        const ax = (start.x + to.x) / 2 + lat.x * off - p.x;
+        const az = (start.z + to.z) / 2 + lat.z * off - p.z;
+        const ad = Math.hypot(ax, az);
+        if (ad > 0.4 && (ax * dirx + az * dirz) > 0) yaw = datan2(-ax / ad, -az / ad);
+      }
       if (s.alternate && jumped && p.mode === Mode.Air && p.y < to.y - 0.4) {
         // Move away from the wall we last kicked off (toward the opposite wall) and keep tapping jump.
         let nx = -dirz * s.aim;

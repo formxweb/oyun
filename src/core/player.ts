@@ -1094,7 +1094,8 @@ export class PlayerController {
             // right = (-dz, dx)
             const sx = -dz * side;
             const sz = dx * side;
-            const w = this.probeWall(p, sx, sz, 0.35, p.y + 0.35, p.y + 1.5);
+            // generous acquisition: a wall within an arm's length catches the run
+            const w = this.probeWall(p, sx, sz, T.wallRunReach, p.y + 0.35, p.y + 1.5);
             if (!w || !isWallRunnable(w.b)) continue;
             if (Math.abs(w.nx * dx + w.nz * dz) > 0.6) continue;
             if (p.hasLastRun && w.nx * p.lastRunNx + w.nz * p.lastRunNz > 0.8) continue;
@@ -1542,6 +1543,12 @@ export class PlayerController {
   // ---------------------------------------------------------------- walls
 
   private startWallRun(p: PlayerState, w: WallHit, side: number): void {
+    // Settle against the wall face (the run is caught from up to an arm's length away).
+    const gap = w.dist - T.radius - 0.02;
+    if (gap > 0) {
+      p.x -= w.nx * gap;
+      p.z -= w.nz * gap;
+    }
     const hs = this.hspeed(p);
     const dx = p.vx / hs;
     const dz = p.vz / hs;

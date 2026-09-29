@@ -16,6 +16,8 @@ export interface AudioVolumes {
  */
 export class AudioEngine {
   ctx: AudioContext | null = null;
+  /** Altitude of the summit, for altitude-scaled wind. */
+  worldTop = 1000;
   private master!: GainNode;
   private sfx!: GainNode;
   private amb!: GainNode;
@@ -439,7 +441,7 @@ export class AudioEngine {
   update(dt: number, s: { y: number; speed: number; falling: boolean; fallSpeed: number; weather: number; region: number; danger: number; paused: boolean; menu: boolean; wind: number }): void {
     if (!this.ctx) return;
     const t = this.ctx.currentTime;
-    const alt = Math.min(1, s.y / 2500);
+    const alt = Math.min(1, s.y / this.worldTop);
     const windLevel = s.menu ? 0.05 : 0.05 + alt * 0.12 + Math.min(0.2, s.speed * 0.012) + s.wind * 0.02;
     this.windGain.gain.setTargetAtTime(s.paused ? 0.01 : windLevel, t, 0.3);
     this.windFilter.frequency.setTargetAtTime(300 + alt * 500 + s.speed * 60, t, 0.4);

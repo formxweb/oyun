@@ -1,5 +1,5 @@
 import * as THREE from 'three';
-import type { World } from '../../core/world/world';
+import { cloudLayers, type World } from '../../core/world/world';
 import type { Atmosphere } from '../../core/world/types';
 import { atmosphereAt } from './atmosphere';
 import { Character, DEFAULT_LOOK, type Look } from './character';
@@ -82,13 +82,7 @@ export class RenderSystem {
     this.sun.shadow.bias = -0.0004;
     this.sun.shadow.normalBias = 0.03;
 
-    this.sky = new Sky([
-      { y: 285, color: 0xf4efe6, density: 0.32, scale: 520 },
-      { y: 1075, color: 0xffffff, density: 0.62, scale: 700 },
-      { y: 1640, color: 0x6a7282, density: 0.8, scale: 480 },
-      { y: 1965, color: 0x8a92a4, density: 0.72, scale: 520 },
-      { y: 2238, color: 0xffe6c0, density: 0.66, scale: 800 },
-    ]);
+    this.sky = new Sky(cloudLayers(world.regions));
     this.scene.add(this.sky.group);
     this.worldView = new WorldView(world, this.u, { drawDistance: this.preset.drawDistance, lodDistance: this.preset.lodDistance, detail: this.preset.detail });
     this.scene.add(this.worldView.group);
