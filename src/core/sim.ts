@@ -417,7 +417,9 @@ export class Simulation {
   private checkCollectibles(): void {
     if (this.cfg.mode !== 'story') return;
     const p = this.player;
-    const cy = p.y + 0.9;
+    // body centre in the current gravity frame
+    const [ox, oy, oz] = p.frame === 0 ? [0, 0.9, 0] : toWorld(p.frame, 0, 0.9, 0);
+    const cy = p.y + oy;
     for (const c of this.world.collectibles) {
       if (this.collected.has(c.id)) continue;
       if (Math.abs(c.region - this.region) > 1) continue;
@@ -426,9 +428,9 @@ export class Simulation {
       const isEcho = c.kind === 'echo';
       if (isEcho && !p.majorFall) continue;
       const r = isEcho ? T.echoRadius : T.collectRadius;
-      const dx = p.x - c.pos.x;
+      const dx = p.x + ox - c.pos.x;
       const dy = cy - c.pos.y;
-      const dz = p.z - c.pos.z;
+      const dz = p.z + oz - c.pos.z;
       if (dx * dx + dy * dy + dz * dz > r * r) continue;
       this.collect(c);
     }

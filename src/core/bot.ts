@@ -207,7 +207,7 @@ export function playLeg(world: World, sim: Simulation, step: RouteStep, out: Inp
       let mz = tick < s.wait ? 0 : 1;
       if (dist < 0.5 && p.grounded) mz = 0;
       // Riding a moving platform: stand still until it brings the destination within reach.
-      if (riding && p.grounded && p.groundId >= 0 && world.solids[p.groundId].mover >= 0 && dist > 4.5 && tick >= s.wait) mz = 0;
+      if (riding && p.grounded && p.groundId >= 0 && world.solids[p.groundId].mover >= 0 && (dist > 4.5 || Math.hypot(p.platVx, p.platVz) > 5.5) && tick >= s.wait) mz = 0;
       let btn = s.sprint ? Btn.Sprint : 0;
       if (!jumped && s.jumpAt >= 0 && tick >= s.wait && along >= s.jumpAt && (p.grounded || p.mode === Mode.Slide)) {
         jumped = true;
