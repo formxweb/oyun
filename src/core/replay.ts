@@ -10,7 +10,7 @@ import type { World } from './world/world';
  * Physics version. Bump whenever movement or collision changes; replays and leaderboard
  * entries from other versions are not comparable.
  */
-export const SIM_VERSION = 'sim-7';
+export const SIM_VERSION = 'sim-8';
 
 export interface ReplayHeader {
   simVersion: string;

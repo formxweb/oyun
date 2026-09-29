@@ -183,6 +183,8 @@ export function playLeg(world: World, sim: Simulation, step: RouteStep, out: Inp
         mz = 1;
       }
       if (step.a === 'interact' && tick % 30 === 5) btn |= Btn.Interact;
+      // Throw the plumb line at a ring once airborne.
+      if (step.a === 'tether' && jumped && p.mode === Mode.Air && tick % 4 < 2) btn |= Btn.Interact;
       if (p.mode === Mode.Line || p.mode === Mode.Zip) {
         const rope = world.ropes[p.ropeId];
         if (rope && Math.hypot(p.x - rope.b.x, p.z - rope.b.z) < 0.7) btn |= Btn.Jump;

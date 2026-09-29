@@ -394,7 +394,8 @@ export type RouteAction =
   | 'shift'
   | 'drop'
   | 'interact'
-  | 'climb';
+  | 'climb'
+  | 'tether';
 
 export interface RouteBranch {
   id: string;

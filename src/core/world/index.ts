@@ -3,6 +3,7 @@ import { region02 } from './regions/r02_blocks';
 import { region03 } from './regions/r03_construction';
 import { region04 } from './regions/r04_machine';
 import { region05 } from './regions/r05_city';
+import { region06 } from './regions/r06_skyway';
 import type { RegionData } from './types';
 import { World } from './world';
 
@@ -16,7 +17,8 @@ export function buildRegions(): RegionData[] {
   const r3 = region03(r2.exit);
   const r4 = region04(r3.exit);
   const r5 = region05(r4.exit);
-  return [r1.data, r2.data, r3.data, r4.data, r5.data];
+  const r6 = region06(r5.exit);
+  return [r1.data, r2.data, r3.data, r4.data, r5.data, r6.data];
 }
 
 export function buildWorld(): World {

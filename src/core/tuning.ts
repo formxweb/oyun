@@ -73,6 +73,9 @@ export const T = {
 
   lineSpeed: 2.8,
   zipMaxSpeed: 17,
+  zipBrakeDist: 7,
+  zipBrake: 26,
+  zipArriveSpeed: 5.5,
   ladderSpeed: 3.2,
   ropeGrabRadius: 0.6,
   swingPump: 7.5,

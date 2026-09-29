@@ -1870,6 +1870,8 @@ export class PlayerController {
     const dz = sz / len;
     const acc = -dy * T.gravityDown - 1.0;
     p.ropeSpeed = clamp(p.ropeSpeed + acc * DT, 2, T.zipMaxSpeed);
+    // The trolley brakes over the last few metres so arrivals are catchable.
+    if ((1 - p.ropeT) * len < T.zipBrakeDist) p.ropeSpeed = Math.max(T.zipArriveSpeed, p.ropeSpeed - T.zipBrake * DT);
     p.ropeT += (p.ropeSpeed * DT) / len;
     const release = p.jumpBuf > 0 || p.ropeT >= 1 || this.pressed & Btn.Crouch;
     const k = Math.min(1, p.ropeT);

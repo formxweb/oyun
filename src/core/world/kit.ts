@@ -190,7 +190,7 @@ export function facadeRot(b: RegionBuilder, x: number, y0: number, z: number, w:
 export { v3 };
 export type { V3 };
 
-export type HelixMove = 'start' | 'walk' | 'step' | 'hop' | 'jump' | 'long' | 'climb' | 'ramp' | 'ladder' | 'drop' | 'tall' | 'wallrun' | 'chimney' | 'beam' | 'scale' | 'vent';
+export type HelixMove = 'start' | 'walk' | 'step' | 'hop' | 'jump' | 'long' | 'climb' | 'ramp' | 'ladder' | 'drop' | 'tall' | 'wallrun' | 'chimney' | 'beam' | 'scale' | 'vent' | 'swing' | 'bar' | 'zip' | 'tether' | 'line';
 
 export interface HelixStep {
   move: HelixMove;
@@ -278,6 +278,16 @@ const MOVE: Record<HelixMove, { gap: number; dh: number }> = {
   scale: { gap: 0.25, dh: 4.6 },
   // a steam vent on the previous deck throws you up to this one
   vent: { gap: 1.2, dh: 6.5 },
+  // rope swing hanging over the gap
+  swing: { gap: 7, dh: 0 },
+  // horizontal bar across the gap: swing and release
+  bar: { gap: 5, dh: 0.5 },
+  // cable from above the previous deck down to this one
+  zip: { gap: 20, dh: -7 },
+  // brass ring high over the gap: throw the plumb line and swing
+  tether: { gap: 10, dh: 0 },
+  // hand-over-hand line across the gap
+  line: { gap: 9, dh: 0 },
 };
 
 /**
@@ -303,7 +313,24 @@ const ROUTE_ACTION: Record<HelixMove, import('./types').RouteAction> = {
   beam: 'run',
   scale: 'climb',
   vent: 'run',
+  swing: 'swing',
+  bar: 'swing',
+  zip: 'zip',
+  tether: 'tether',
+  line: 'rope',
 };
+
+/** Total angle (degrees) a helix of these steps turns through at radius r (after `fromLen`). */
+export function helixSpan(steps: HelixStep[], r: number, fromLen = 0): number {
+  let prevLen = fromLen;
+  let arc = 0;
+  steps.forEach((s, i) => {
+    const len = s.len ?? 3;
+    if (i > 0 || fromLen > 0) arc += prevLen / 2 + (s.gap ?? MOVE[s.move].gap) + len / 2;
+    prevLen = len;
+  });
+  return (arc / r) * (180 / Math.PI);
+}
 
 export function helix(
   b: RegionBuilder,
@@ -393,6 +420,38 @@ export function helix(
       // a sheer face from the previous deck's level up to this deck: run up it
       const y0 = prev.top - 0.4;
       b.block(p.x, y0, p.z, len, top - 0.25 - y0, wid, { mat, tint: s.tint ?? 0x7a6a58, yaw });
+    }
+    if (prev && (s.move === 'swing' || s.move === 'bar' || s.move === 'zip' || s.move === 'tether' || s.move === 'line')) {
+      // Points along the travel direction: the previous deck's far edge and this deck's near edge.
+      const ea = prev.a + dir * ((prev.len / 2) / r) * (180 / Math.PI);
+      const na = a - dir * ((len / 2) / r) * (180 / Math.PI);
+      const e = polar(ea, r);
+      const n = polar(na, r);
+      const mid = { x: (e.x + n.x) / 2, z: (e.z + n.z) / 2 };
+      const ropeMat = s.mat ?? Mat.Cloth;
+      if (s.move === 'swing') {
+        b.rope('swing', v3(mid.x, top + 12, mid.z), v3(mid.x, top + 2.5, mid.z), v3(0, 0, 1), Mat.Cloth);
+        b.cable(v3(mid.x - 3, top + 12, mid.z), v3(mid.x + 3, top + 12, mid.z), 0, Mat.Wood, 0x6a4a30);
+      } else if (s.move === 'bar') {
+        const rx = dsin((a * Math.PI) / 180);
+        const rz = dcos((a * Math.PI) / 180);
+        const y = Math.max(prev.top, top) + 2.9;
+        b.rope('bar', v3(mid.x - rx * 2, y, mid.z - rz * 2), v3(mid.x + rx * 2, y, mid.z + rz * 2), v3(0, 1, 0), Mat.Metal);
+        for (const k of [-2.1, 2.1]) b.cable(v3(mid.x + rx * k, y, mid.z + rz * k), v3(mid.x + rx * k, y + 14, mid.z + rz * k), 0, Mat.Metal, 0x3a3a3a);
+      } else if (s.move === 'zip') {
+        const za = prev.a + dir * ((prev.len / 2 - 0.9) / r) * (180 / Math.PI);
+        const zb = a - dir * ((len / 2 - 1.1) / r) * (180 / Math.PI);
+        const pa = polar(za, r);
+        const pb = polar(zb, r);
+        b.rope('zip', v3(pa.x, prev.top + 2.4, pa.z), v3(pb.x, top + 2.9, pb.z), v3(0, 1, 0), Mat.Metal);
+        b.dbox(pa.x, prev.top, pa.z, 0.2, 3.2, 0.2, { mat: Mat.Metal, tint: 0x3a3a3a });
+        b.dbox(pb.x, top, pb.z, 0.2, 3.6, 0.2, { mat: Mat.Metal, tint: 0x3a3a3a });
+      } else if (s.move === 'tether') {
+        b.hook(mid.x, top + 10, mid.z);
+        b.cable(v3(mid.x, top + 10, mid.z), v3(mid.x, top + 30, mid.z), 0, Mat.Brass, 0x9a7a3a);
+      } else {
+        b.rope('line', v3(e.x, prev.top + 2.4, e.z), v3(n.x, top + 2.4, n.z), v3(0, 1, 0), ropeMat);
+      }
     }
     if (prev && s.move === 'vent') {
       // A brass grate at the far end of the previous deck breathing a column of steam.
