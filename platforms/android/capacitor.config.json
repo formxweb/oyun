@@ -1,0 +1,12 @@
+{
+  "appId": "games.vertigo.abovethefall",
+  "appName": "VERTIGO",
+  "webDir": "../../dist",
+  "backgroundColor": "#07090d",
+  "server": { "androidScheme": "https" },
+  "android": {
+    "allowMixedContent": false,
+    "captureInput": true,
+    "webContentsDebuggingEnabled": false
+  }
+}

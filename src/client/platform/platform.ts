@@ -1,3 +1,4 @@
+import { Capacitor, registerPlugin } from '@capacitor/core';
 import { LocalStorageKV, type KV } from '../services/storage';
 
 /**
@@ -11,22 +12,12 @@ export type PlatformKind = 'web' | 'android' | 'steam';
 export interface SteamBridge {
   available(): Promise<boolean>;
   playerName(): Promise<string>;
-  steamId(): Promise<string>;
   authTicket(): Promise<string>;
   activateAchievement(apiName: string): Promise<void>;
-  setStat(name: string, value: number): Promise<void>;
-  overlayActive(): boolean;
   quit(): void;
   setFullscreen(on: boolean): void;
-  friendsSteamIds(): Promise<string[]>;
   onMicroTxnAuthorization(cb: (orderId: string, authorized: boolean) => void): void;
   language(): Promise<string>;
-}
-
-interface CapacitorGlobal {
-  isNativePlatform?: () => boolean;
-  getPlatform?: () => string;
-  Plugins?: Record<string, unknown>;
 }
 
 /**
@@ -35,6 +26,8 @@ interface CapacitorGlobal {
  */
 export interface GamesPlugin {
   signIn(): Promise<{ serverAuthCode: string | null; displayName?: string }>;
+  /** unlocks resource `achievement_<key>`; a no-op if the resource is not configured */
+  unlock(o: { key: string }): Promise<void>;
 }
 
 export interface HapticsPlugin {
@@ -46,13 +39,12 @@ export class Platform {
   readonly kind: PlatformKind;
   readonly kv: KV;
   readonly steam: SteamBridge | null;
-  private readonly cap: CapacitorGlobal | null;
+  private readonly plugins = new Map<string, unknown>();
 
   constructor() {
-    const w = window as unknown as { vertigoSteam?: SteamBridge; Capacitor?: CapacitorGlobal };
+    const w = window as unknown as { vertigoSteam?: SteamBridge };
     this.steam = w.vertigoSteam ?? null;
-    this.cap = w.Capacitor && w.Capacitor.isNativePlatform?.() ? w.Capacitor : null;
-    this.kind = this.steam ? 'steam' : this.cap && this.cap.getPlatform?.() === 'android' ? 'android' : 'web';
+    this.kind = this.steam ? 'steam' : Capacitor.isNativePlatform() && Capacitor.getPlatform() === 'android' ? 'android' : 'web';
     this.kv = new LocalStorageKV();
   }
 
@@ -68,8 +60,15 @@ export class Platform {
     if (this.steam) this.steam.quit();
   }
 
+  /** A native Capacitor plugin (Android only), or null where it does not exist. */
   plugin<T>(name: string): T | null {
-    return (this.cap?.Plugins?.[name] as T) ?? null;
+    if (this.kind !== 'android' || !Capacitor.isPluginAvailable(name)) return null;
+    let p = this.plugins.get(name);
+    if (!p) {
+      p = registerPlugin<object>(name);
+      this.plugins.set(name, p);
+    }
+    return p as T;
   }
 
   haptic(strength: 'light' | 'medium' | 'heavy'): void {
@@ -94,8 +93,11 @@ export class Platform {
     }
   }
 
-  achievement(steamApiName: string): void {
+  achievement(id: string, steamApiName: string): void {
     this.steam?.activateAchievement(steamApiName).catch(() => undefined);
+    this.plugin<GamesPlugin>('VertigoGames')
+      ?.unlock({ key: id })
+      .catch(() => undefined);
   }
 
   /** Lock landscape on phones; the game is designed for landscape. */

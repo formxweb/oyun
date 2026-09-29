@@ -1,0 +1,19 @@
+{
+  "name": "vertigo-android",
+  "version": "1.0.0",
+  "description": "VERTIGO: Above the Fall — Android build (Capacitor + Play Billing + Play Games)",
+  "private": true,
+  "type": "module",
+  "scripts": {
+    "setup": "node setup.mjs",
+    "bundle": "node setup.mjs && cd android && ./gradlew bundleRelease"
+  },
+  "dependencies": {
+    "@capacitor/android": "8.5.2",
+    "@capacitor/core": "8.5.2",
+    "@capacitor/haptics": "8.0.2"
+  },
+  "devDependencies": {
+    "@capacitor/cli": "8.5.2"
+  }
+}

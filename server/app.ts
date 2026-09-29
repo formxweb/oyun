@@ -1,4 +1,4 @@
-import { createHash, randomBytes, randomUUID } from 'node:crypto';
+import { createHash, randomBytes, randomInt, randomUUID } from 'node:crypto';
 import { createServer, type Server } from 'node:http';
 import { PRODUCT_BY_SKU } from '../src/core/catalog/store';
 import { dailyRoute, dateKey, weekKey, type DailyRoute } from '../src/core/daily';
@@ -518,8 +518,11 @@ export function createGameServer(opt: ServerOptions): GameServer {
     if (!info) throw new HttpError(409, 'wallet');
     const amount = steamAmount(sku, info.currency);
     if (amount === null) throw new HttpError(409, 'currency');
-    // 63-bit random order id (Steam wants a unique uint64 per order)
-    const orderId = (BigInt('0x' + randomBytes(8).toString('hex')) & 0x7fffffffffffffffn).toString();
+    // Unique per order (Steam wants a uint64). Kept below 2^53: the Steam client's authorization
+    // callback can reach JavaScript as a plain number, which must round-trip exactly.
+    let orderId = '';
+    do orderId = String(randomInt(1, 2 ** 21) * 2 ** 32 + randomInt(0, 2 ** 32));
+    while (D.purchases['steam:' + orderId]);
     const now = Date.now();
     putPurchase({ key: orderId, platform: 'steam', playerId: p.id, sku, state: 'pending', orderId, createdAt: now, updatedAt: now });
     const r = await opt.steam.initTxn(orderId, p.steamId, steamLanguage(str(b, 'language', 32, true)), info.currency, { itemId: prod.steamItemDef, amount, description: prod.sku });

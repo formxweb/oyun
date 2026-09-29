@@ -5,7 +5,7 @@ import { dailyRoute, dateKey, type DailyRoute } from '../core/daily';
 import type { SimEvent } from '../core/events';
 import { Btn, type InputFrame } from '../core/input';
 import { Mode } from '../core/player';
-import { SIM_VERSION, verifyReplay, worldHash, serializeReplay, type Replay } from '../core/replay';
+import { SIM_VERSION, parseReplay, verifyReplay, worldHash, serializeReplay, type Replay } from '../core/replay';
 import { medalFor, trialScore } from '../core/scoring';
 import type { SimConfig } from '../core/sim';
 import { T } from '../core/tuning';
@@ -484,7 +484,6 @@ export class App implements UIContext {
         const raw = await this.net.replay(top.replayId);
         if (!raw || !this.session) return;
         try {
-          const { parseReplay } = await import('../core/replay');
           const g = new GhostRunner(this.world, parseReplay(raw), trial, gates, finish, 0xff9a7a);
           if (g.result.ok) {
             this.ghosts.push(g);
@@ -499,14 +498,19 @@ export class App implements UIContext {
 
   raceReplay(replayId: string, trialId: string): void {
     this.startTrial(trialId, 'none');
-    this.net.replay(replayId).then(async (raw) => {
-      if (!raw || !this.session) return;
-      const { parseReplay } = await import('../core/replay');
+    const session = this.session;
+    this.net.replay(replayId).then((raw) => {
+      // the player may have left or restarted while the ghost was downloading
+      if (!raw || !this.session || this.session !== session) return;
       const trial = this.world.trials.find((x) => x.id === trialId);
-      const g = new GhostRunner(this.world, parseReplay(raw), trial, undefined, undefined, 0xff9a7a);
-      if (g.result.ok) {
-        this.ghosts.push(g);
-        this.rs.scene.add(g.character.root, g.character.scarf);
+      try {
+        const g = new GhostRunner(this.world, parseReplay(raw), trial, undefined, undefined, 0xff9a7a);
+        if (g.result.ok) {
+          this.ghosts.push(g);
+          this.rs.scene.add(g.character.root, g.character.scarf);
+        } else this.ui.toast(t('ghost.incompatible'));
+      } catch {
+        this.ui.toast(t('ghost.incompatible'));
       }
     });
   }
@@ -1390,7 +1394,7 @@ export class App implements UIContext {
     this.hud.toast(t('ach.unlocked'), t('ach.' + id), 'gold');
     this.audio.achievement();
     const def = ACHIEVEMENTS.find((a) => a.id === id);
-    if (def) this.platform.achievement(def.steam);
+    if (def) this.platform.achievement(def.id, def.steam);
     this.saveNow();
   }
 

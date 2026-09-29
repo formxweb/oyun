@@ -1,8 +1,11 @@
-/** Achievement catalog. `steam` is the API name configured in Steamworks; `play` the Play Games id. */
+/**
+ * Achievement catalog. `steam` is the API name configured in Steamworks. On Google Play the id
+ * is resolved on the device from the Play Console's exported games-ids.xml resource
+ * `achievement_<id>` (platforms/android), so no console-assigned ids live in code.
+ */
 export interface AchievementDef {
   id: string;
   steam: string;
-  play: string;
   hidden: boolean;
   /** Progress target for incremental achievements (shown as n / target). */
   target?: number;
@@ -11,7 +14,6 @@ export interface AchievementDef {
 const def = (id: string, hidden = false, target?: number): AchievementDef => ({
   id,
   steam: 'ACH_' + id.toUpperCase(),
-  play: 'CgkI_vertigo_' + id,
   hidden,
   target,
 });

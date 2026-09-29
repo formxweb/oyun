@@ -212,6 +212,7 @@ const UI: Record<string, string> = {
   'trial.ghost.last': 'Previous attempt',
   'trial.ghost.friend': 'Friend',
   'trial.ghost.top': 'World record',
+  'ghost.incompatible': 'That ghost was recorded with an older version of the game and cannot be raced.',
   'trial.go': 'GO',
   'trial.results': 'Results',
   'trial.time': 'Time',

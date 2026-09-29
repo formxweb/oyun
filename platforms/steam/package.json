@@ -1,0 +1,30 @@
+{
+  "name": "vertigo-steam",
+  "productName": "VERTIGO Above the Fall",
+  "version": "1.0.0",
+  "description": "VERTIGO: Above the Fall — Steam build (Electron + Steamworks)",
+  "private": true,
+  "main": "main.cjs",
+  "scripts": {
+    "stage": "node stage.mjs",
+    "start": "npm run stage && electron .",
+    "dist": "npm run stage && electron-builder --publish never"
+  },
+  "dependencies": {
+    "steamworks.js": "^0.4.0"
+  },
+  "devDependencies": {
+    "electron": "^33.2.0",
+    "electron-builder": "^25.1.8"
+  },
+  "build": {
+    "appId": "games.vertigo.abovethefall",
+    "productName": "VERTIGO Above the Fall",
+    "directories": { "output": "release" },
+    "files": ["main.cjs", "preload.cjs", "steam.json", "app/**/*", "node_modules/steamworks.js/**/*"],
+    "asarUnpack": ["node_modules/steamworks.js/dist/**/*"],
+    "win": { "target": [{ "target": "dir", "arch": ["x64"] }] },
+    "linux": { "target": [{ "target": "dir", "arch": ["x64"] }] },
+    "mac": { "target": [{ "target": "dir", "arch": ["universal"] }] }
+  }
+}

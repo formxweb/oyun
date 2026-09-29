@@ -1,0 +1,5 @@
+{
+  "appId": 480,
+  "authIdentity": "vertigo",
+  "note": "appId 480 is Valve's public test app (Spacewar) for local runs; set your own App ID before shipping. authIdentity must equal STEAM_AUTH_IDENTITY on the server."
+}

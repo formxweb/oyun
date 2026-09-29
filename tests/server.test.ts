@@ -344,6 +344,7 @@ describe('Steam purchases', () => {
     const init = await call<{ orderId: string }>('POST', '/v1/purchases/steam/init', { sku: 'vertigo.bundle.night', language: 'turkish' }, tok);
     expect(init.status).toBe(200);
     const orderId = init.body.orderId;
+    expect(Number.isSafeInteger(Number(orderId)) && String(Number(orderId)) === orderId).toBe(true);
     expect(steam.items.get(orderId)!.amount).toBe(599);
     // finalizing before the user authorized grants nothing
     expect((await call<{ status: string }>('POST', '/v1/purchases/steam/finalize', { orderId }, tok)).body.status).toBe('pending');

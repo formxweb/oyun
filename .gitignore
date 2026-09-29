@@ -9,8 +9,9 @@ test-results/
 playwright-report/
 platforms/steam/node_modules/
 platforms/steam/app/
+platforms/steam/release/
 platforms/android/node_modules/
-platforms/android/android/app/build/
+platforms/android/android/
 .env
 .env.*
 !.env.example

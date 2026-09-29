@@ -212,6 +212,7 @@ const UI: Record<string, string> = {
   'trial.ghost.last': 'Önceki deneme',
   'trial.ghost.friend': 'Arkadaş',
   'trial.ghost.top': 'Dünya rekoru',
+  'ghost.incompatible': 'Bu hayalet oyunun eski bir sürümüyle kaydedilmiş; onunla yarışılamaz.',
   'trial.go': 'BAŞLA',
   'trial.results': 'Sonuçlar',
   'trial.time': 'Süre',
