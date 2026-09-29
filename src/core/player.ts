@@ -2143,17 +2143,20 @@ export class PlayerController {
   private changeFrame(p: PlayerState, nf: number): void {
     const cur = p.frame;
     p.frame = nf;
-    this.recentre(p, cur, nf);
+    this.recentre(p, cur, nf, true);
   }
 
-  private recentre(p: PlayerState, from: number, to: number): void {
+  private recentre(p: PlayerState, from: number, to: number, stepOnto = false): void {
     const h = this.bodyH(p) * 0.5;
     const oldUp = toWorld(from, 0, 1, 0);
     const newUp = toWorld(to, 0, 1, 0);
-    // centre = feet + oldUp*h ; new feet = centre - newUp*h
-    p.x += (oldUp[0] - newUp[0]) * h;
-    p.y += (oldUp[1] - newUp[1]) * h;
-    p.z += (oldUp[2] - newUp[2]) * h;
+    const turn = oldUp[0] * newUp[0] + oldUp[1] * newUp[1] + oldUp[2] * newUp[2];
+    // centre = feet + oldUp*h ; new feet = centre - newUp*d, where d is how far the centre is from
+    // the surface being stepped onto: a body radius for a wall beside us, half a height otherwise.
+    const d = stepOnto && Math.abs(turn) < 0.5 ? T.radius + 0.02 : h;
+    p.x += oldUp[0] * h - newUp[0] * d;
+    p.y += oldUp[1] * h - newUp[1] * d;
+    p.z += oldUp[2] * h - newUp[2] * d;
     if (p.mode !== Mode.Air) {
       this.detach(p);
       p.mode = Mode.Air;
@@ -2165,20 +2168,26 @@ export class PlayerController {
     p.wallClimbUsed = false;
     p.majorFall = false;
     this.st.fallActive = false;
-    // Facing: keep it horizontal in the new frame.
+    // Facing: keep it horizontal in the new frame; walking into a wall turns into walking up it.
     const fw = toWorld(from, p.fx, 0, p.fz);
-    const fl = toLocal(to, fw[0], fw[1], fw[2]);
+    let fl = toLocal(to, fw[0], fw[1], fw[2]);
+    if (Math.sqrt(fl[0] * fl[0] + fl[2] * fl[2]) < 0.1) fl = toLocal(to, oldUp[0], oldUp[1], oldUp[2]);
     const l = Math.sqrt(fl[0] * fl[0] + fl[2] * fl[2]);
     if (l > 0.1) {
       p.fx = fl[0] / l;
       p.fz = fl[2] / l;
     }
-    // Remove velocity into the new floor, keep the rest (world).
+    // Velocity into the new floor is turned along it (up the wall), the rest is kept (world).
     const vUp = p.vx * newUp[0] + p.vy * newUp[1] + p.vz * newUp[2];
     if (vUp < 0) {
       p.vx -= vUp * newUp[0];
       p.vy -= vUp * newUp[1];
       p.vz -= vUp * newUp[2];
+      if (stepOnto && Math.abs(turn) < 0.5) {
+        p.vx -= vUp * oldUp[0] * 0.8;
+        p.vy -= vUp * oldUp[1] * 0.8;
+        p.vz -= vUp * oldUp[2] * 0.8;
+      }
     }
     // peakY in new local frame
     const pl = toLocal(to, p.x, p.y, p.z);

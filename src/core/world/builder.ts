@@ -481,7 +481,7 @@ export class RegionBuilder {
     this.data.dailyGates.push(v3(x + this.ox, y + this.oy, z + this.oz));
   }
 
-  route(x: number, y: number, z: number, a: RouteAction, extra: { t?: number; m?: number; note?: string; flags?: string[]; expect?: string } = {}): void {
+  route(x: number, y: number, z: number, a: RouteAction, extra: { t?: number; m?: number; note?: string; flags?: string[]; expect?: string; frame?: number } = {}): void {
     (this.routeSink ?? this.data.route).push({ p: v3(x + this.ox, y + this.oy, z + this.oz), a, flags: extra.flags ?? this.routeFlags ?? undefined, ...extra });
   }
 

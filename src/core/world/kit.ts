@@ -190,7 +190,7 @@ export function facadeRot(b: RegionBuilder, x: number, y0: number, z: number, w:
 export { v3 };
 export type { V3 };
 
-export type HelixMove = 'start' | 'walk' | 'step' | 'hop' | 'jump' | 'long' | 'climb' | 'ramp' | 'ladder' | 'drop' | 'tall' | 'wallrun' | 'chimney' | 'beam' | 'scale' | 'vent' | 'swing' | 'bar' | 'zip' | 'tether' | 'line';
+export type HelixMove = 'start' | 'walk' | 'step' | 'hop' | 'jump' | 'long' | 'climb' | 'ramp' | 'ladder' | 'drop' | 'tall' | 'wallrun' | 'chimney' | 'beam' | 'scale' | 'vent' | 'swing' | 'bar' | 'zip' | 'tether' | 'line' | 'turn';
 
 export interface HelixStep {
   move: HelixMove;
@@ -288,6 +288,8 @@ const MOVE: Record<HelixMove, { gap: number; dh: number }> = {
   tether: { gap: 10, dh: 0 },
   // hand-over-hand line across the gap
   line: { gap: 9, dh: 0 },
+  // a marked wall: touch it and it becomes the floor; walk up it to the deck on top
+  turn: { gap: 0.25, dh: 12 },
 };
 
 /**
@@ -318,6 +320,7 @@ const ROUTE_ACTION: Record<HelixMove, import('./types').RouteAction> = {
   zip: 'zip',
   tether: 'tether',
   line: 'rope',
+  turn: 'shift',
 };
 
 /** Total angle (degrees) a helix of these steps turns through at radius r (after `fromLen`). */
@@ -374,7 +377,10 @@ export function helix(
     const mat = s.mat ?? o.mat ?? Mat.Wood;
     const tint = s.tint ?? o.tint ?? 0xa88a60;
     const conv: [number, number] | undefined = s.conv ? [tx * s.conv, tz * s.conv] : undefined;
-    b.plat(p.x, top, p.z, len, wid, 0.25, { mat, tint, yaw, tag: s.tag, flags: (s.flags ?? 0) | (conv ? SolidFlag.Conveyor : 0), conv });
+    // gravity walls and their decks sit on the world grid (wall frames collide with bounds)
+    const gridYaw = Math.round(yaw / (Math.PI / 2)) * (Math.PI / 2);
+    const deckYaw = s.move === 'turn' ? gridYaw : yaw;
+    b.plat(p.x, top, p.z, len, wid, 0.25, { mat, tint, yaw: deckYaw, tag: s.tag, flags: (s.flags ?? 0) | (conv ? SolidFlag.Conveyor : 0), conv });
     const prev = out[out.length - 1];
     if (prev && s.move === 'ramp') {
       const sx = prev.x + tx * (prev.len / 2);
@@ -452,6 +458,20 @@ export function helix(
       } else {
         b.rope('line', v3(e.x, prev.top + 2.4, e.z), v3(n.x, top + 2.4, n.z), v3(0, 1, 0), ropeMat);
       }
+    }
+    if (prev && s.move === 'turn') {
+      // The marked face (gravity shift), a shift field over the approach, and a settle field
+      // over this deck so gravity returns as you come over the top.
+      const y0 = prev.top - 0.4;
+      b.block(p.x, y0, p.z, len, top - 0.25 - y0, wid, { mat: Mat.Obsidian, tint: s.tint ?? 0x2a2a3a, yaw: deckYaw, flags: SolidFlag.Shift | SolidFlag.NoWallRun });
+      const face = polar(a - dir * ((len / 2 + 0.03) / r) * (180 / Math.PI), r);
+      for (let k = 1; k < 4; k++) b.glyph('plumb', face.x, prev.top + (k * (top - prev.top)) / 4, face.z, 1.4, yaw + Math.PI / 2, { tint: 0x9ab8ff });
+      const pa = polar(prev.a, r);
+      const lo = { x: Math.min(pa.x, p.x) - 4, z: Math.min(pa.z, p.z) - 4 };
+      const hi = { x: Math.max(pa.x, p.x) + 4, z: Math.max(pa.z, p.z) + 4 };
+      b.zone('shift', lo.x, prev.top - 1, lo.z, hi.x, top + 1.5, hi.z, { active: 10 });
+      const hl = Math.max(len, wid) / 2 - 0.2;
+      b.zone('gravityReset', p.x - hl, top - 0.1, p.z - hl, p.x + hl, top + 3.5, p.z + hl, {});
     }
     if (prev && s.move === 'vent') {
       // A brass grate at the far end of the previous deck breathing a column of steam.

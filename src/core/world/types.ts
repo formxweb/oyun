@@ -416,4 +416,6 @@ export interface RouteStep {
   flags?: string[];
   /** the leg only counts once this memory flag has been set (levers, bells, valves) */
   expect?: string;
+  /** gravity frame the destination is stood in (0 = normal; walls and ceilings under a shift) */
+  frame?: number;
 }

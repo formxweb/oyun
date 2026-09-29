@@ -135,8 +135,22 @@ export class Collider {
         b.c = so.c;
         b.s = so.s;
         b.slope = so.slope;
+      } else if (frame === 1 && so.shape !== Shape.Ramp) {
+        // Upside down (ceiling walking): a box turned about the vertical axis is still turned
+        // about the local up axis, so it stays exact. (x, y, z) -> (x, -y, -z)
+        b.shape = so.shape;
+        b.cx = so.x;
+        b.cy = -so.y;
+        b.cz = -so.z;
+        b.hx = so.hx;
+        b.hy = so.hy;
+        b.hz = so.hz;
+        b.c = so.c;
+        b.s = -so.s;
+        b.slope = so.slope;
       } else {
-        // In shifted frames every solid is treated as its axis-aligned bounds.
+        // In wall frames every solid is treated as its axis-aligned bounds (so gravity walls are
+        // authored on the world grid).
         const cw = toLocal(frame, (so.minX + so.maxX) / 2, (so.minY + so.maxY) / 2, (so.minZ + so.maxZ) / 2);
         const hw = toLocal(frame, (so.maxX - so.minX) / 2, (so.maxY - so.minY) / 2, (so.maxZ - so.minZ) / 2);
         b.shape = Shape.Box;

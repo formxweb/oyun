@@ -1,4 +1,5 @@
 import { Btn, quantizeInput, type InputFrame } from './input';
+import { toLocal } from './collision';
 import { datan2, type V3 } from './math';
 import { Mode, type PlayerState } from './player';
 import { Simulation, type SimConfig } from './sim';
@@ -191,8 +192,15 @@ export function playLeg(world: World, sim: Simulation, step: RouteStep, out: Inp
     for (let tick = 0; tick < maxTicks; tick++) {
       const p = sim.player;
       const along = (p.x - sx) * dirx + (p.z - sz) * dirz;
-      const tx = to.x - p.x;
-      const tz = to.z - p.z;
+      // Steer in the player's gravity frame (walls and ceilings become floors under a shift).
+      let tx = to.x - p.x;
+      let tz = to.z - p.z;
+      if (p.frame !== 0) {
+        const [lx, , lz] = toLocal(p.frame, to.x, to.y, to.z);
+        const [px, , pz] = toLocal(p.frame, p.x, p.y, p.z);
+        tx = lx - px;
+        tz = lz - pz;
+      }
       const dist = Math.hypot(tx, tz);
       let yaw = dist > 0.3 ? datan2(-tx / dist, -tz / dist) : baseYaw;
       if (!s.alternate) yaw += s.aim * (jumped ? 1 : 0.3);
@@ -259,7 +267,7 @@ export function playLeg(world: World, sim: Simulation, step: RouteStep, out: Inp
       // Arrive at the route point itself (not merely somewhere on a large target surface), so the
       // next leg starts where the level designer intended; give up on precision after a while.
       const near = Math.hypot(q.x - to.x, q.z - to.z);
-      const onSurface = q.grounded && Math.abs(q.y - to.y) < 0.35 && (targets.has(q.groundId) || near < 1.2);
+      const onSurface = q.grounded && q.frame === (step.frame ?? 0) && Math.abs(q.y - to.y) < 0.35 && (targets.has(q.groundId) || near < 1.2);
       onSurfaceTicks = onSurface ? onSurfaceTicks + 1 : 0;
       if (onSurface && (near < 0.8 || (onSurfaceTicks > 150 && near < 3)) && (!step.expect || sim.st.flags.has(step.expect))) {
         ok = true;

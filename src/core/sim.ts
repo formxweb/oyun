@@ -1,4 +1,5 @@
 import type { SimEvent } from './events';
+import { toWorld } from './collision';
 import { Btn, type InputFrame } from './input';
 import { dsin, type V3 } from './math';
 import { Mode, PlayerController, newExt, newPlayer, type ExtForces, type PlayerState } from './player';
@@ -286,9 +287,11 @@ export class Simulation {
     const p = this.player;
     const w = this.world;
     const t = this.tick / TICK_RATE;
-    const cx = p.x;
-    const cy = p.y + 0.9;
-    const cz = p.z;
+    // body centre, whichever way gravity currently points
+    const [ox, oy, oz] = p.frame === 0 ? [0, 0.9, 0] : toWorld(p.frame, 0, 0.9, 0);
+    const cx = p.x + ox;
+    const cy = p.y + oy;
+    const cz = p.z + oz;
     let area: string | null = null;
     for (const z of w.zones) {
       const inside = cx >= z.min.x && cx <= z.max.x && cy >= z.min.y && cy <= z.max.y && cz >= z.min.z && cz <= z.max.z;

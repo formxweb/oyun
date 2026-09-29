@@ -31,7 +31,7 @@ const ATM = {
 };
 
 const PR = 26;
-const R = 56;
+const R = 66;
 const IRON = 0x4a4e56;
 const WET = 0x5a6068;
 const WHITE = 0xd8d4c8;
@@ -62,11 +62,10 @@ export function region08(entry: Exit): { data: RegionData; exit: Exit } {
 
   // ------------------------------------------------------------------ Section A: the Lighthouses
   b.zone('area', -140, y0 - 2, -140, 140, y0 + 34, 140, { key: 'area.r8.lighthouses' });
-  const gw = polar(entry.a, 59.6);
-  b.plat(gw.x, y0, gw.z, 5.6, 2.2, 0.3, { mat: Mat.Metal, tint: IRON, yaw: radialYaw(entry.a) });
-  b.route(gw.x, y0, gw.z, 'run');
-  const a0 = polar(entry.a, R);
-  b.plat(a0.x, y0, a0.z, 4, 4, 0.4, { mat: Mat.Stone, tint: 0x6a6a6a, yaw: quantYaw(rad(entry.a)) });
+  // off the belltower balcony and along the outside of the tower
+  const a0A = entry.a - arc(4.8);
+  const a0 = polar(a0A, R);
+  b.plat(a0.x, y0, a0.z, 4, 4, 0.4, { mat: Mat.Stone, tint: 0x6a6a6a, yaw: quantYaw(rad(a0A)) });
   b.route(a0.x, y0, a0.z, 'run');
   const A = helix(
     b,
@@ -80,7 +79,7 @@ export function region08(entry: Exit): { data: RegionData; exit: Exit } {
       { move: 'climb', mat: Mat.Metal, tint: WET, flags: SolidFlag.Slippery },
       { move: 'walk', len: 5, wid: 4, mat: Mat.Stone, tint: 0x6a6a6a },
     ],
-    { from: deck(a0.x, a0.z, y0, entry.a, 4), pillarR: PR, mat: Mat.Stone },
+    { from: deck(a0.x, a0.z, y0, a0A, 4), pillarR: PR, mat: Mat.Stone },
   );
   const aEnd = A[A.length - 1];
   b.anchor('r8.lighthouses', polar(aEnd.a, R - 1.2).x, aEnd.top, polar(aEnd.a, R - 1.2).z, 0, 'anchor.r8.lighthouses', true);
